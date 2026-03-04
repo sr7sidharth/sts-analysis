@@ -55,22 +55,12 @@ export type CardStats = {
    * Number of wins among runs that contain this card.
    */
   winsWithCard: number;
-  /**
-   * Number of runs whose final deck contains this card and ended in a loss.
-   * (Derived as runsWithCard - winsWithCard in most views.)
-   */
-  lossesWithCard?: number;
 };
 
 export type RelicStats = {
   runsWithRelic: number;
   winCount: number;
   avgFloor: number;
-  /**
-   * Number of losses among runs that contain this relic.
-   * (Derived as runsWithRelic - winCount in most views.)
-   */
-  lossCount?: number;
 };
 
 export type OverviewStats = {
@@ -110,6 +100,28 @@ export type RemovedCardStats = {
   runsWithRemoval: number;
   winsWithRemoval: number;
   avgFloor: number;
+};
+
+export type CardOccurrenceStats = {
+  id: string;
+  runsWithCardOverall: number;
+  runsWithCardWins: number;
+  runsWithCardLosses: number;
+};
+
+export type ShopStats = {
+  cards: Record<string, ShopCardStats>;
+  relics: Record<string, ShopRelicStats>;
+};
+
+export type EncounterAverages = {
+  monsters: { wins: number; losses: number };
+  elites: { wins: number; losses: number };
+  shops: { wins: number; losses: number };
+  events: { wins: number; losses: number };
+  rests: { wins: number; losses: number };
+  restSiteUpgrades: { wins: number; losses: number };
+  cardRemovals: { wins: number; losses: number };
 };
 
 

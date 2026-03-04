@@ -20,7 +20,7 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between px-4 py-3">
         <Link href="/" className="text-sm font-semibold text-zinc-900">
           STS Run Analyzer
         </Link>

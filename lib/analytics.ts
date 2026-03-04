@@ -1,12 +1,15 @@
 import type {
   CardStats,
+  CardOccurrenceStats,
   DeathStats,
+  EncounterAverages,
   RelicStats,
   Run,
   RunFilters,
   OverviewStats,
   ShopCardStats,
   ShopRelicStats,
+  ShopStats,
   RemovedCardStats,
   DeckSizeStats,
 } from "@/types/run";
@@ -15,6 +18,63 @@ function normalizeCardName(name: string): string {
   const plusIndex = name.indexOf("+");
   if (plusIndex === -1) return name;
   return name.slice(0, plusIndex);
+}
+
+function getRaw(run: Run): any {
+  return (run.raw as any) ?? {};
+}
+
+function getMasterDeckRaw(run: Run): string[] {
+  const raw = getRaw(run);
+  const masterDeck: unknown = raw?.master_deck;
+  if (!Array.isArray(masterDeck)) return [];
+  return masterDeck.filter((entry: unknown): entry is string => typeof entry === "string");
+}
+
+function getRelicsRaw(run: Run): string[] {
+  const raw = getRaw(run);
+  const relics: unknown = raw?.relics;
+  if (!Array.isArray(relics)) return [];
+  return relics.filter((entry: unknown): entry is string => typeof entry === "string");
+}
+
+function getPathPerFloorRaw(run: Run): string[] {
+  const raw = getRaw(run);
+  const pathPerFloor: unknown = raw?.path_per_floor;
+  const pathTaken: unknown = raw?.path_taken;
+  const source: unknown[] | null = Array.isArray(pathPerFloor)
+    ? pathPerFloor
+    : Array.isArray(pathTaken)
+      ? pathTaken
+      : null;
+  if (!source) return [];
+  return source.filter((value: unknown): value is string => typeof value === "string");
+}
+
+function getItemsPurgedRaw(run: Run): string[] {
+  const raw = getRaw(run);
+  const removed: unknown = raw?.items_purged;
+  if (!Array.isArray(removed)) return [];
+  return removed.filter((entry: unknown): entry is string => typeof entry === "string");
+}
+
+function getCampfireChoicesRaw(run: Run): any[] {
+  const raw = getRaw(run);
+  const campfireChoices: unknown = raw?.campfire_choices;
+  return Array.isArray(campfireChoices) ? campfireChoices : [];
+}
+
+function getCardChoicesRaw(run: Run): any[] {
+  const raw = getRaw(run);
+  const cardChoices: unknown = raw?.card_choices;
+  return Array.isArray(cardChoices) ? cardChoices : [];
+}
+
+function getGoldPerFloorRaw(run: Run): number[] {
+  const raw = getRaw(run);
+  const goldPerFloor: unknown = raw?.gold_per_floor;
+  if (!Array.isArray(goldPerFloor)) return [];
+  return goldPerFloor.filter((value: unknown): value is number => typeof value === "number");
 }
 
 export function filterRuns(runs: Run[], filters: RunFilters): Run[] {
@@ -142,14 +202,11 @@ export function computeCardStats(runs: Run[]): Record<string, CardStats> {
   };
 
   for (const run of runs) {
-    const raw: any = run.raw;
-
     // Track presence of cards in the final deck for runsWithCard / winsWithCard.
-    const masterDeck: unknown = raw?.master_deck;
-    if (Array.isArray(masterDeck)) {
+    const masterDeck = getMasterDeckRaw(run);
+    if (masterDeck.length > 0) {
       const seenInDeck = new Set<string>();
       for (const entry of masterDeck) {
-        if (typeof entry !== "string") continue;
         const id = normalizeCardName(entry);
         seenInDeck.add(id);
       }
@@ -158,15 +215,14 @@ export function computeCardStats(runs: Run[]): Record<string, CardStats> {
         stat.runsWithCard += 1;
         if (run.victory) {
           stat.winsWithCard += 1;
-        } else {
-          stat.lossesWithCard = (stat.lossesWithCard ?? 0) + 1;
         }
       }
     }
 
-    if (!raw || !Array.isArray(raw.card_choices)) continue;
+    const cardChoices = getCardChoicesRaw(run);
+    if (cardChoices.length === 0) continue;
 
-    for (const choice of raw.card_choices as any[]) {
+    for (const choice of cardChoices) {
       const notPickedRaw = choice.not_picked ?? choice.not_picked_cards ?? [];
       const pickedRaw = choice.picked ?? choice.picked_card ?? null;
 
@@ -210,26 +266,17 @@ export function computeCardStats(runs: Run[]): Record<string, CardStats> {
   return stats;
 }
 
-export type CardOccurrenceStats = {
-  id: string;
-  runsWithCardOverall: number;
-  runsWithCardWins: number;
-  runsWithCardLosses: number;
-};
-
 export function computeCardOccurrenceStats(
   runs: Run[],
 ): CardOccurrenceStats[] {
   const map = new Map<string, { overall: number; wins: number; losses: number }>();
 
   for (const run of runs) {
-    const raw: any = run.raw;
-    const masterDeck: unknown = raw?.master_deck;
-    if (!Array.isArray(masterDeck)) continue;
+    const masterDeck = getMasterDeckRaw(run);
+    if (masterDeck.length === 0) continue;
 
     const seen = new Set<string>();
     for (const entry of masterDeck) {
-      if (typeof entry !== "string") continue;
       const id = normalizeCardName(entry);
       seen.add(id);
     }
@@ -273,9 +320,8 @@ export function computeRelicStats(runs: Run[]): Record<string, RelicStats> {
   > = {};
 
   for (const run of runs) {
-    const raw: any = run.raw;
-    const relics: unknown = raw?.relics;
-    if (!Array.isArray(relics)) continue;
+    const relics = getRelicsRaw(run);
+    if (relics.length === 0) continue;
 
     const seenThisRun = new Set<string>();
     for (const relic of relics) {
@@ -308,11 +354,6 @@ export function computeRelicStats(runs: Run[]): Record<string, RelicStats> {
   return result;
 }
 
-export type ShopStats = {
-  cards: Record<string, ShopCardStats>;
-  relics: Record<string, ShopRelicStats>;
-};
-
 export function computeShopStats(runs: Run[]): ShopStats {
   const cardStats: Record<string, ShopCardStats> = {};
   const relicStats: Record<string, ShopRelicStats> = {};
@@ -340,7 +381,7 @@ export function computeShopStats(runs: Run[]): ShopStats {
   };
 
   for (const run of runs) {
-    const raw: any = run.raw;
+    const raw = getRaw(run);
     const itemsPurchased: unknown = raw?.items_purchased;
     if (!Array.isArray(itemsPurchased)) continue;
 
@@ -410,13 +451,11 @@ export function computeRemovedCardStats(
   > = {};
 
   for (const run of runs) {
-    const raw: any = run.raw;
-    const removed: unknown = raw?.items_purged;
-    if (!Array.isArray(removed)) continue;
+    const removed = getItemsPurgedRaw(run);
+    if (removed.length === 0) continue;
 
     const seenThisRun = new Set<string>();
     for (const entry of removed) {
-      if (typeof entry !== "string") continue;
       const id = normalizeCardName(entry);
 
       if (!stats[id]) {
@@ -456,66 +495,57 @@ export function computeRemovedCardStats(
   return result;
 }
 
-export type RemovedCardInstance = {
+type RemovedCardInstance = {
   name: string;
   floor: number | null;
 };
 
 export function getRemovedCardsForRun(run: Run): RemovedCardInstance[] {
-  const raw: any = run.raw;
-  const removed: unknown = raw?.items_purged;
-  if (!Array.isArray(removed)) return [];
-
+  const removed = getItemsPurgedRaw(run);
   // Floor information is not available in the sampled logs, so we surface
   // the card names only and leave floor as null for future extension.
-  return removed
-    .filter((entry: unknown): entry is string => typeof entry === "string")
-    .map((name) => ({
-      name,
-      floor: null,
-    }));
+  return removed.map((name) => ({
+    name,
+    floor: null,
+  }));
 }
 
-export type GoldPoint = {
+type GoldPoint = {
   floor: number;
   gold: number;
 };
 
 export function getGoldPerFloor(run: Run): GoldPoint[] {
-  const raw: any = run.raw;
-  const goldPerFloor: unknown = raw?.gold_per_floor;
-  if (!Array.isArray(goldPerFloor)) return [];
-
   const points: GoldPoint[] = [];
+  const goldPerFloor = getGoldPerFloorRaw(run);
   for (let i = 0; i < goldPerFloor.length; i += 1) {
     const value = goldPerFloor[i];
-    if (typeof value !== "number") continue;
     points.push({ floor: i + 1, gold: value });
   }
 
   return points;
 }
 
-export type ShopPurchase = {
+type ShopPurchase = {
   name: string;
   floor: number | null;
   isCard: boolean;
 };
 
-export type ShopVisit = {
+type ShopVisit = {
   floor: number;
   cards: string[];
   relics: string[];
 };
 
-export type RunShopInfo = {
+type RunShopInfo = {
   visits: ShopVisit[];
   cards: ShopPurchase[];
   relics: ShopPurchase[];
 };
 
 export function getShopInfoForRun(run: Run): RunShopInfo {
-  const raw: any = run.raw;
+  const raw = getRaw(run);
   const items: unknown = raw?.items_purchased;
   const floors: unknown = raw?.item_purchase_floors;
   const pathPerFloor: unknown = raw?.path_per_floor;
@@ -619,7 +649,7 @@ export function getShopInfoForRun(run: Run): RunShopInfo {
   };
 }
 
-export type FinalDeckCard = {
+type FinalDeckCard = {
   name: string;
   upgraded: boolean;
   isStarting: boolean;
@@ -680,10 +710,38 @@ const BASE_DECK: Record<string, string[]> = {
 };
 
 export function getFinalDeck(run: Run): FinalDeckCard[] {
-  const raw: any = run.raw;
-  const masterDeck: unknown = raw?.master_deck;
-  if (!Array.isArray(masterDeck)) return [];
+  const masterDeck = getMasterDeckRaw(run);
+  if (masterDeck.length === 0) return [];
 
+  // Build a multiset of cards picked from card_choices (reward selections).
+  // These are definitively "added" cards regardless of whether they share a
+  // base name with a starting card. We also include shop-purchased cards via
+  // getShopInfoForRun so the entire "obtained during run" set is covered.
+  const pickedCounts = new Map<string, number>();
+  const cardChoices = getCardChoicesRaw(run);
+  for (const choice of cardChoices) {
+    const picked: unknown = choice.picked ?? choice.picked_card;
+    if (typeof picked === "string" && picked !== "SKIP" && picked !== "") {
+      const id = normalizeCardName(picked);
+      pickedCounts.set(id, (pickedCounts.get(id) ?? 0) + 1);
+    }
+  }
+
+  // Include cards bought at shop: items_purchased that are cards (in master_deck).
+  const raw = getRaw(run);
+  const itemsPurchased: unknown = raw?.items_purchased;
+  const deckSet = new Set(masterDeck.map(normalizeCardName));
+  if (Array.isArray(itemsPurchased)) {
+    for (const item of itemsPurchased) {
+      if (typeof item !== "string") continue;
+      const id = normalizeCardName(item);
+      if (deckSet.has(id)) {
+        pickedCounts.set(id, (pickedCounts.get(id) ?? 0) + 1);
+      }
+    }
+  }
+
+  // Starting deck: how many of each base-name card the character starts with.
   const base = BASE_DECK[run.character] ?? [];
   const baseCounts = new Map<string, number>();
   for (const name of base) {
@@ -691,28 +749,40 @@ export function getFinalDeck(run: Run): FinalDeckCard[] {
     baseCounts.set(id, (baseCounts.get(id) ?? 0) + 1);
   }
 
+  // Classify each card in master_deck.
+  // Strategy: first attribute cards to picked/purchased budget, then to starting.
+  // This correctly handles cases like drafting "Bash+" when you already have
+  // "Bash" in your starting deck.
+  const remainingPicked = new Map(pickedCounts);
+  const remainingBase = new Map(baseCounts);
+
   const deck: FinalDeckCard[] = [];
   for (const entry of masterDeck) {
-    if (typeof entry !== "string") continue;
     const upgraded = entry.includes("+");
     const id = normalizeCardName(entry);
-    const remaining = baseCounts.get(id) ?? 0;
-    const isStarting = remaining > 0;
-    if (isStarting) {
-      baseCounts.set(id, remaining - 1);
+
+    const pickedLeft = remainingPicked.get(id) ?? 0;
+    if (pickedLeft > 0) {
+      remainingPicked.set(id, pickedLeft - 1);
+      deck.push({ name: entry, upgraded, isStarting: false, isAdded: true });
+      continue;
     }
-    deck.push({
-      name: entry,
-      upgraded,
-      isStarting,
-      isAdded: !isStarting,
-    });
+
+    const baseLeft = remainingBase.get(id) ?? 0;
+    if (baseLeft > 0) {
+      remainingBase.set(id, baseLeft - 1);
+      deck.push({ name: entry, upgraded, isStarting: true, isAdded: false });
+      continue;
+    }
+
+    // Not in starting deck and not in tracked picks — treat as added
+    // (e.g. obtained via event or other mechanism not in card_choices).
+    deck.push({ name: entry, upgraded, isStarting: false, isAdded: true });
   }
 
   deck.sort((a, b) => {
-    if (a.upgraded !== b.upgraded) {
-      return a.upgraded ? -1 : 1;
-    }
+    // Starting cards first, then added; within each group sort by name.
+    if (a.isStarting !== b.isStarting) return a.isStarting ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
 
@@ -736,9 +806,8 @@ export function computeDeckSizeStats(runs: Run[]): DeckSizeStats {
   let countLosses = 0;
 
   for (const run of runs) {
-    const raw: any = run.raw;
-    const masterDeck: unknown = raw?.master_deck;
-    if (!Array.isArray(masterDeck)) continue;
+    const masterDeck = getMasterDeckRaw(run);
+    if (masterDeck.length === 0) continue;
     const size = masterDeck.length;
 
     totalAll += size;
@@ -761,25 +830,21 @@ export function computeDeckSizeStats(runs: Run[]): DeckSizeStats {
 }
 
 export function getRelicsForRun(run: Run): string[] {
-  const raw: any = run.raw;
-  const relics: unknown = raw?.relics;
-  if (!Array.isArray(relics)) return [];
-  return relics.filter((r: unknown): r is string => typeof r === "string");
+  return getRelicsRaw(run);
 }
 
-export type CardDecisionRow = {
+type CardDecisionRow = {
   floor: number | null;
   picked: string | null;
   skipped: string[];
 };
 
 export function getCardDecisionRows(run: Run): CardDecisionRow[] {
-  const raw: any = run.raw;
-  const choices: unknown = raw?.card_choices;
-  if (!Array.isArray(choices)) return [];
+  const choices = getCardChoicesRaw(run);
+  if (choices.length === 0) return [];
 
   const rows: CardDecisionRow[] = [];
-  for (const choice of choices as any[]) {
+  for (const choice of choices) {
     const floor =
       typeof choice.floor === "number" ? choice.floor : (null as number | null);
     const picked: string | null =
@@ -799,30 +864,46 @@ export function getCardDecisionRows(run: Run): CardDecisionRow[] {
   return rows;
 }
 
-export type PathStep = {
+type PathStep = {
   floor: number;
   symbol: string;
   detail?: string; // Additional info like monster name, event name, rest action, etc.
 };
 
 export function getPathOverview(run: Run): PathStep[] {
-  const raw: any = run.raw;
-  const pathPerFloor: unknown = raw?.path_per_floor;
-  const pathTaken: unknown = raw?.path_taken;
+  const raw = getRaw(run);
   const campfireChoices: unknown = raw?.campfire_choices;
   const damageTaken: unknown = raw?.damage_taken;
   const eventChoices: unknown = raw?.event_choices;
   const relicsObtained: unknown = raw?.relics_obtained;
 
-  const source: unknown[] | null = Array.isArray(pathPerFloor)
-    ? pathPerFloor
-    : Array.isArray(pathTaken)
-      ? pathTaken
-      : null;
+  const source = getPathPerFloorRaw(run);
+  if (source.length === 0) return [];
 
-  if (!source) return [];
+  // Compute act-start floors from boss positions in path_per_floor.
+  // Each time a "B" (boss) appears at absolute floor F, the next act starts at F+1.
+  // This lets us convert absolute floors to per-act relative floors for lookup
+  // tables (like damage_taken) that may use per-act floor numbers.
+  const actStartFloors: number[] = [1];
+  for (let i = 0; i < source.length; i += 1) {
+    if (source[i] === "B") {
+      actStartFloors.push(i + 2); // next act starts at absolute floor i+2
+    }
+  }
 
-  // Build lookup maps for additional details
+  const toRelativeFloor = (absoluteFloor: number): number => {
+    let actStart = 1;
+    for (const start of actStartFloors) {
+      if (start <= absoluteFloor) {
+        actStart = start;
+      } else {
+        break;
+      }
+    }
+    return absoluteFloor - actStart + 1;
+  };
+
+  // Rest site actions (campfire choices always use absolute floor numbers in STS).
   const restActions = new Map<number, string>();
   if (Array.isArray(campfireChoices)) {
     for (const choice of campfireChoices) {
@@ -835,22 +916,46 @@ export function getPathOverview(run: Run): PathStep[] {
           restActions.set(floor, "Sleep");
         } else if (key === "SMITH" && typeof data === "string") {
           restActions.set(floor, `Smith, ${data}`);
+        } else if (key === "LIFT") {
+          restActions.set(floor, "Lift");
+        } else if (key === "DIG") {
+          restActions.set(floor, "Dig");
+        } else if (key === "RECALL") {
+          restActions.set(floor, "Recall");
+        } else if (typeof key === "string") {
+          restActions.set(floor, key);
         }
       }
     }
   }
 
-  const enemyNames = new Map<number, string>();
+  // damage_taken can use either absolute or per-act relative floor numbers
+  // depending on the game version / logging tool. We index both and prefer
+  // the absolute lookup first; fall back to per-act relative at render time.
+  const enemyNamesAbsolute = new Map<number, string>();
+  const enemyNamesRelative = new Map<number, string>();
   if (Array.isArray(damageTaken)) {
     for (const entry of damageTaken) {
       if (typeof entry !== "object" || entry === null) continue;
       const floor = (entry as any).floor;
       const enemies = (entry as any).enemies;
       if (typeof floor === "number" && typeof enemies === "string") {
-        enemyNames.set(floor, enemies);
+        // Store under both the raw floor number (absolute lookup) and
+        // the per-act relative equivalent (for relative-floor data sources).
+        enemyNamesAbsolute.set(floor, enemies);
+        enemyNamesRelative.set(floor, enemies);
       }
     }
   }
+
+  const getEnemyName = (absoluteFloor: number): string | undefined => {
+    // Try absolute floor first (most common format).
+    const byAbsolute = enemyNamesAbsolute.get(absoluteFloor);
+    if (byAbsolute) return byAbsolute;
+    // Fall back to per-act relative floor (some older logging tools).
+    const rel = toRelativeFloor(absoluteFloor);
+    return enemyNamesRelative.get(rel);
+  };
 
   const eventNames = new Map<number, string>();
   if (Array.isArray(eventChoices)) {
@@ -878,48 +983,19 @@ export function getPathOverview(run: Run): PathStep[] {
 
   const result: PathStep[] = [];
   for (let i = 0; i < source.length; i += 1) {
-    const value = source[i];
-    if (typeof value !== "string") continue;
+    const symbol = source[i];
     const floor = i + 1;
     let detail: string | undefined;
 
-    const symbol = value;
     if (symbol === "R") {
-      // Rest site - show action
-      const action = restActions.get(floor);
-      if (action) {
-        detail = action;
-      }
-    } else if (symbol === "M") {
-      // Monster - show enemy name
-      const enemy = enemyNames.get(floor);
-      if (enemy) {
-        detail = enemy;
-      }
-    } else if (symbol === "E") {
-      // Elite - show enemy name
-      const enemy = enemyNames.get(floor);
-      if (enemy) {
-        detail = enemy;
-      }
-    } else if (symbol === "B") {
-      // Boss - show boss name
-      const boss = enemyNames.get(floor);
-      if (boss) {
-        detail = boss;
-      }
+      detail = restActions.get(floor);
+    } else if (symbol === "M" || symbol === "E" || symbol === "B") {
+      detail = getEnemyName(floor);
     } else if (symbol === "?") {
-      // Event - show event name
-      const event = eventNames.get(floor);
-      if (event) {
-        detail = event;
-      }
+      // Try event_choices first, then damage_taken (some events involve combat).
+      detail = eventNames.get(floor) ?? getEnemyName(floor);
     } else if (symbol === "T") {
-      // Treasure - show relic if obtained
-      const relic = treasureRelics.get(floor);
-      if (relic) {
-        detail = relic;
-      }
+      detail = treasureRelics.get(floor);
     }
 
     result.push({ floor, symbol, detail });
@@ -927,16 +1003,6 @@ export function getPathOverview(run: Run): PathStep[] {
 
   return result;
 }
-
-export type EncounterAverages = {
-  monsters: { wins: number; losses: number };
-  elites: { wins: number; losses: number };
-  shops: { wins: number; losses: number };
-  events: { wins: number; losses: number };
-  rests: { wins: number; losses: number };
-  restSiteUpgrades: { wins: number; losses: number };
-  cardRemovals: { wins: number; losses: number };
-};
 
 export function computeEncounterAverages(runs: Run[]): EncounterAverages {
   const makeBucket = () => ({ wins: 0, losses: 0 });
@@ -955,10 +1021,9 @@ export function computeEncounterAverages(runs: Run[]): EncounterAverages {
   let lossRuns = 0;
 
   for (const run of runs) {
-    const raw: any = run.raw;
-    const pathPerFloor: unknown = raw?.path_per_floor;
-    const campfireChoices: unknown = raw?.campfire_choices;
-    const itemsPurged: unknown = raw?.items_purged;
+    const pathPerFloor = getPathPerFloorRaw(run);
+    const campfireChoices = getCampfireChoicesRaw(run);
+    const itemsPurged = getItemsPurgedRaw(run);
 
     let monsters = 0;
     let elites = 0;
@@ -968,9 +1033,8 @@ export function computeEncounterAverages(runs: Run[]): EncounterAverages {
     let smiths = 0;
     let removals = 0;
 
-    if (Array.isArray(pathPerFloor)) {
+    if (pathPerFloor.length > 0) {
       for (const value of pathPerFloor) {
-        if (typeof value !== "string") continue;
         if (value === "M") monsters += 1;
         else if (value === "E") elites += 1;
         else if (value === "$") shops += 1;
@@ -979,7 +1043,7 @@ export function computeEncounterAverages(runs: Run[]): EncounterAverages {
       }
     }
 
-    if (Array.isArray(campfireChoices)) {
+    if (campfireChoices.length > 0) {
       for (const choice of campfireChoices) {
         if (typeof choice !== "object" || choice === null) continue;
         const key = (choice as any).key;
@@ -991,9 +1055,7 @@ export function computeEncounterAverages(runs: Run[]): EncounterAverages {
       }
     }
 
-    if (Array.isArray(itemsPurged)) {
-      removals += itemsPurged.filter((x) => typeof x === "string").length;
-    }
+    removals += itemsPurged.length;
 
     const bucket =
       run.victory

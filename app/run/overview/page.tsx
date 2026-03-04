@@ -1,21 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { RunSidebar } from "@/components/RunSidebar";
 import { AggregateInsights } from "@/components/Insights/AggregateInsights";
 import { useRuns } from "@/lib/useRuns";
 
 export default function OverviewPage() {
   const { runs, removeRun, clearAll } = useRuns();
-  const [selectedCharacter, setSelectedCharacter] = useState<string | undefined>(
-    undefined,
-  );
-
-  useEffect(() => {
-    if (!selectedCharacter && runs.length > 0) {
-      setSelectedCharacter(runs[0]?.character);
-    }
-  }, [runs, selectedCharacter]);
+  const [activeCharacter, setActiveCharacter] = useState<string | undefined>(undefined);
 
   if (runs.length === 0) {
     return (
@@ -39,7 +31,7 @@ export default function OverviewPage() {
       <RunSidebar
         runs={runs}
         onDeleteRun={removeRun}
-        activeCharacter={selectedCharacter}
+        activeCharacter={activeCharacter}
       />
       <section className="flex-1 overflow-y-auto px-6 py-6">
         <div className="mb-4 flex items-center justify-between text-xs text-zinc-600">
@@ -62,11 +54,9 @@ export default function OverviewPage() {
         </div>
         <AggregateInsights
           runs={runs}
-          selectedCharacter={selectedCharacter}
-          onSelectedCharacterChange={setSelectedCharacter}
+          onSelectedCharacterChange={setActiveCharacter}
         />
       </section>
     </main>
   );
 }
-

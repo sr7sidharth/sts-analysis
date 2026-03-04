@@ -10,6 +10,17 @@ import {
   getShopInfoForRun,
   getGoldPerFloor,
 } from "@/lib/analytics";
+import { ScrollableTable } from "@/components/ScrollableTable";
+
+const SYMBOL_LABEL: Record<string, string> = {
+  M: "Monster",
+  E: "Elite",
+  B: "Boss",
+  R: "Rest",
+  $: "Shop",
+  "?": "Event",
+  T: "Treasure",
+};
 
 type SingleRunInsightsProps = {
   run: Run;
@@ -59,7 +70,8 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
         </div>
       </section>
 
-      <section className="grid gap-6 md:grid-cols-2">
+      {/* Final Deck + Relics + Removed Cards — items-start prevents height equalisation */}
+      <section className="grid items-start gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
           <div className="mb-2 flex items-baseline justify-between gap-2">
             <h2 className="text-sm font-semibold text-zinc-900">Final Deck</h2>
@@ -89,12 +101,12 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
                     }`}
                   >
                     {card.name}
+                    {card.upgraded && (
+                      <span className="ml-1 text-[10px] font-semibold uppercase">
+                        +
+                      </span>
+                    )}
                   </span>
-                  {card.upgraded && (
-                    <span className="ml-2 text-[10px] font-semibold uppercase text-sky-700">
-                      +
-                    </span>
-                  )}
                 </li>
               ))}
             </ul>
@@ -103,9 +115,10 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
             <p className="mt-3 text-[11px] text-zinc-500">
               <span className="font-semibold text-emerald-700">Green</span>: added
               cards ·{" "}
-              <span className="font-semibold text-sky-700">Blue</span>: upgraded
-              cards · <span className="font-semibold text-zinc-800">Black</span>:
-              starting deck
+              <span className="font-semibold text-sky-700">Blue</span>: starting
+              cards upgraded via smith/event ·{" "}
+              <span className="font-semibold text-zinc-800">Black</span>: starting
+              deck
             </p>
           )}
         </div>
@@ -156,73 +169,27 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
         </div>
       </section>
 
-      <section className="grid gap-6 md:grid-cols-2">
+      {/* Card Decisions + Path Overview — items-start prevents height equalisation */}
+      <section className="grid items-start gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
           <h2 className="mb-2 text-sm font-semibold text-zinc-900">
             Card Decisions
           </h2>
-          <div className="max-h-80 overflow-x-auto overflow-y-auto rounded-lg border border-zinc-200 bg-white">
-            <table className="min-w-full border-collapse text-xs">
-              <thead className="sticky top-0 z-10 bg-zinc-50 text-[11px] uppercase tracking-wide text-zinc-500">
-                <tr>
-                  <th className="px-3 py-2 text-left">Floor</th>
-                  <th className="px-3 py-2 text-left">Picked</th>
-                  <th className="px-3 py-2 text-left">Skipped</th>
-                </tr>
-              </thead>
-              <tbody>
-                {decisions.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={3}
-                      className="px-3 py-3 text-center text-zinc-500"
-                    >
-                      No card choice data available.
-                    </td>
-                  </tr>
-                ) : (
-                  <>
-                    {decisions.map((row, index) => (
-                      <tr
-                        key={`${row.floor ?? "?"}-${row.picked ?? "none"}-${index}`}
-                        className="border-t border-zinc-100 even:bg-zinc-50/60"
-                      >
-                        <td className="px-3 py-1.5 text-left text-zinc-700">
-                          {row.floor ?? "—"}
-                        </td>
-                        <td className="px-3 py-1.5 text-left text-zinc-800">
-                          {row.picked ?? "—"}
-                        </td>
-                        <td className="px-3 py-1.5 text-left text-zinc-700">
-                          {row.skipped.length > 0
-                            ? row.skipped.join(", ")
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                    {Array.from({ length: Math.max(0, 20 - decisions.length) }).map(
-                      (_, index) => (
-                        <tr
-                          key={`empty-${index}`}
-                          className="border-t border-zinc-100 even:bg-zinc-50/60"
-                        >
-                          <td className="px-3 py-1.5 text-left text-zinc-400">
-                            —
-                          </td>
-                          <td className="px-3 py-1.5 text-left text-zinc-400">
-                            —
-                          </td>
-                          <td className="px-3 py-1.5 text-left text-zinc-400">
-                            —
-                          </td>
-                        </tr>
-                      ),
-                    )}
-                  </>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <ScrollableTable
+            columns={[
+              { label: "Floor" },
+              { label: "Picked" },
+              { label: "Skipped" },
+            ]}
+            emptyMessage="No card choice data available."
+            rows={decisions.map((row, index) => [
+              <span key={index} className="text-zinc-700">{row.floor ?? "—"}</span>,
+              <span className="text-zinc-800">{row.picked ?? "—"}</span>,
+              <span className="text-zinc-700">
+                {row.skipped.length > 0 ? row.skipped.join(", ") : "—"}
+              </span>,
+            ])}
+          />
         </div>
 
         <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
@@ -232,138 +199,45 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
           {path.length === 0 ? (
             <p className="text-xs text-zinc-500">No path data available.</p>
           ) : (
-            <div className="max-h-80 overflow-x-auto overflow-y-auto rounded-lg border border-zinc-200 bg-white">
-              <table className="min-w-full border-collapse text-xs">
-                <thead className="sticky top-0 z-10 bg-zinc-50 text-[11px] uppercase tracking-wide text-zinc-500">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Floor</th>
-                    <th className="px-3 py-2 text-left">Path</th>
-                    <th className="px-3 py-2 text-right">Gold</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {path.map((step) => {
-                    const goldForFloor = goldPoints.find(
-                      (p) => p.floor === step.floor,
-                    );
-                    return (
-                      <tr
-                        key={step.floor}
-                        className="border-t border-zinc-100 even:bg-zinc-50/60"
-                      >
-                        <td className="px-3 py-1.5 text-left text-zinc-700">
-                          {step.floor}
-                        </td>
-                        <td className="px-3 py-1.5 text-left text-zinc-800">
-                          <span className="font-mono">{step.symbol}</span>
-                          {step.detail && (
-                            <span className="ml-2 text-[11px] text-zinc-600">
-                              {step.symbol === "R" ? `(${step.detail})` : step.detail}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-1.5 text-right text-zinc-500">
-                          {goldForFloor ? `${goldForFloor.gold}g` : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {Array.from({ length: Math.max(0, 20 - path.length) }).map(
-                    (_, index) => (
-                      <tr
-                        key={`empty-${index}`}
-                        className="border-t border-zinc-100 even:bg-zinc-50/60"
-                      >
-                        <td className="px-3 py-1.5 text-left text-zinc-400">
-                          —
-                        </td>
-                        <td className="px-3 py-1.5 text-left text-zinc-400">
-                          —
-                        </td>
-                        <td className="px-3 py-1.5 text-right text-zinc-400">
-                          —
-                        </td>
-                      </tr>
-                    ),
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section>
-        <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
-          <h2 className="mb-2 text-sm font-semibold text-zinc-900">Shop</h2>
-          {shopInfo.visits.length === 0 ? (
-            <p className="text-xs text-zinc-500">
-              No shop visits were recorded in this run.
-            </p>
-          ) : (
-            <div className="max-h-80 overflow-x-auto overflow-y-auto rounded-lg border border-zinc-200 bg-white">
-              <table className="min-w-full border-collapse text-xs">
-                <thead className="sticky top-0 z-10 bg-zinc-50 text-[11px] uppercase tracking-wide text-zinc-500">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Floor</th>
-                    <th className="px-3 py-2 text-left">Cards</th>
-                    <th className="px-3 py-2 text-left">Relics</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shopInfo.visits.map((visit) => (
-                    <tr
-                      key={visit.floor}
-                      className="border-t border-zinc-100 even:bg-zinc-50/60"
-                    >
-                      <td className="px-3 py-1.5 text-left text-zinc-700">
-                        {visit.floor}
-                      </td>
-                      <td className="px-3 py-1.5 text-left text-zinc-800">
-                        {visit.cards.length > 0 ? (
-                          <span className="font-medium">
-                            {visit.cards.join(", ")}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-1.5 text-left text-zinc-800">
-                        {visit.relics.length > 0 ? (
-                          <span className="font-medium">
-                            {visit.relics.join(", ")}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-400">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {Array.from({ length: Math.max(0, 20 - shopInfo.visits.length) }).map(
-                    (_, index) => (
-                      <tr
-                        key={`empty-${index}`}
-                        className="border-t border-zinc-100 even:bg-zinc-50/60"
-                      >
-                        <td className="px-3 py-1.5 text-left text-zinc-400">
-                          —
-                        </td>
-                        <td className="px-3 py-1.5 text-left text-zinc-400">
-                          —
-                        </td>
-                        <td className="px-3 py-1.5 text-left text-zinc-400">
-                          —
-                        </td>
-                      </tr>
-                    ),
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <ScrollableTable
+              columns={[
+                { label: "Floor" },
+                { label: "Path" },
+                { label: "Gold", align: "right" },
+              ]}
+              rows={path.map((step) => {
+                const goldForFloor = goldPoints.find((p) => p.floor === step.floor);
+                const shopVisit = step.symbol === "$"
+                  ? shopInfo.visits.find((v) => v.floor === step.floor)
+                  : undefined;
+                const shopItems = shopVisit
+                  ? [...shopVisit.cards, ...shopVisit.relics]
+                  : [];
+                const label = SYMBOL_LABEL[step.symbol] ?? step.symbol;
+                return [
+                  <span className="text-zinc-700">{step.floor}</span>,
+                  <span className="text-zinc-800">
+                    <span>{label}</span>
+                    {step.detail && (
+                      <span className="ml-2 text-[11px] text-zinc-600">
+                        {step.symbol === "R" ? `(${step.detail})` : step.detail}
+                      </span>
+                    )}
+                    {shopItems.length > 0 && (
+                      <span className="ml-2 text-[11px] text-zinc-600">
+                        ({shopItems.join(", ")})
+                      </span>
+                    )}
+                  </span>,
+                  <span className="text-zinc-500">
+                    {goldForFloor ? `${goldForFloor.gold}g` : "—"}
+                  </span>,
+                ];
+              })}
+            />
           )}
         </div>
       </section>
     </div>
   );
 }
-
