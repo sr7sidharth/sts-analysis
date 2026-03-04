@@ -698,12 +698,17 @@ export function getCardDecisionRows(run: Run): CardDecisionRow[] {
 export type PathStep = {
   floor: number;
   symbol: string;
+  detail?: string; // Additional info like monster name, event name, rest action, etc.
 };
 
 export function getPathOverview(run: Run): PathStep[] {
   const raw: any = run.raw;
   const pathPerFloor: unknown = raw?.path_per_floor;
   const pathTaken: unknown = raw?.path_taken;
+  const campfireChoices: unknown = raw?.campfire_choices;
+  const damageTaken: unknown = raw?.damage_taken;
+  const eventChoices: unknown = raw?.event_choices;
+  const relicsObtained: unknown = raw?.relics_obtained;
 
   const source: unknown[] | null = Array.isArray(pathPerFloor)
     ? pathPerFloor
@@ -713,11 +718,107 @@ export function getPathOverview(run: Run): PathStep[] {
 
   if (!source) return [];
 
+  // Build lookup maps for additional details
+  const restActions = new Map<number, string>();
+  if (Array.isArray(campfireChoices)) {
+    for (const choice of campfireChoices) {
+      if (typeof choice !== "object" || choice === null) continue;
+      const floor = (choice as any).floor;
+      const key = (choice as any).key;
+      const data = (choice as any).data;
+      if (typeof floor === "number") {
+        if (key === "REST") {
+          restActions.set(floor, "Sleep");
+        } else if (key === "SMITH" && typeof data === "string") {
+          restActions.set(floor, `Smith, ${data}`);
+        }
+      }
+    }
+  }
+
+  const enemyNames = new Map<number, string>();
+  if (Array.isArray(damageTaken)) {
+    for (const entry of damageTaken) {
+      if (typeof entry !== "object" || entry === null) continue;
+      const floor = (entry as any).floor;
+      const enemies = (entry as any).enemies;
+      if (typeof floor === "number" && typeof enemies === "string") {
+        enemyNames.set(floor, enemies);
+      }
+    }
+  }
+
+  const eventNames = new Map<number, string>();
+  if (Array.isArray(eventChoices)) {
+    for (const event of eventChoices) {
+      if (typeof event !== "object" || event === null) continue;
+      const floor = (event as any).floor;
+      const eventName = (event as any).event_name;
+      if (typeof floor === "number" && typeof eventName === "string") {
+        eventNames.set(floor, eventName);
+      }
+    }
+  }
+
+  const treasureRelics = new Map<number, string>();
+  if (Array.isArray(relicsObtained)) {
+    for (const relic of relicsObtained) {
+      if (typeof relic !== "object" || relic === null) continue;
+      const floor = (relic as any).floor;
+      const key = (relic as any).key;
+      if (typeof floor === "number" && typeof key === "string") {
+        treasureRelics.set(floor, key);
+      }
+    }
+  }
+
   const result: PathStep[] = [];
   for (let i = 0; i < source.length; i += 1) {
     const value = source[i];
     if (typeof value !== "string") continue;
-    result.push({ floor: i + 1, symbol: value });
+    const floor = i + 1;
+    let detail: string | undefined;
+
+    const symbol = value;
+    if (symbol === "R") {
+      // Rest site - show action
+      const action = restActions.get(floor);
+      if (action) {
+        detail = action;
+      }
+    } else if (symbol === "M") {
+      // Monster - show enemy name
+      const enemy = enemyNames.get(floor);
+      if (enemy) {
+        detail = enemy;
+      }
+    } else if (symbol === "E") {
+      // Elite - show enemy name
+      const enemy = enemyNames.get(floor);
+      if (enemy) {
+        detail = enemy;
+      }
+    } else if (symbol === "B") {
+      // Boss - show boss name
+      const boss = enemyNames.get(floor);
+      if (boss) {
+        detail = boss;
+      }
+    } else if (symbol === "?") {
+      // Event - show event name
+      const event = eventNames.get(floor);
+      if (event) {
+        detail = event;
+      }
+    } else if (symbol === "T") {
+      // Treasure - show relic if obtained
+      const relic = treasureRelics.get(floor);
+      if (relic) {
+        detail = relic;
+      }
+    }
+
+    result.push({ floor, symbol, detail });
   }
 
   return result;

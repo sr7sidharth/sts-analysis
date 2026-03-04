@@ -248,8 +248,13 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
                         <td className="px-3 py-1.5 text-left text-zinc-700">
                           {step.floor}
                         </td>
-                        <td className="px-3 py-1.5 text-left font-mono text-zinc-800">
-                          {step.symbol}
+                        <td className="px-3 py-1.5 text-left text-zinc-800">
+                          <span className="font-mono">{step.symbol}</span>
+                          {step.detail && (
+                            <span className="ml-2 text-[11px] text-zinc-600">
+                              {step.symbol === "R" ? `(${step.detail})` : step.detail}
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-1.5 text-right text-zinc-500">
                           {goldForFloor ? `${goldForFloor.gold}g` : "—"}
