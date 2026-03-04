@@ -29,6 +29,10 @@ export function filterRuns(runs: Run[], filters: RunFilters): Run[] {
     if (run.game && run.game !== "STS1") {
       return false;
     }
+    // Daily runs are excluded from aggregate stats unless explicitly opted in.
+    if (!filters.includeDailies && run.isDaily) {
+      return false;
+    }
     if (filters.character && run.character !== filters.character) {
       return false;
     }

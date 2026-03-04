@@ -47,6 +47,8 @@ export type RunFilters = {
   character?: string;
   ascension?: number;
   result?: RunResultFilter;
+  /** When true, daily challenge runs are included in aggregate stats. Defaults to excluded. */
+  includeDailies?: boolean;
 };
 
 export type CardStats = {

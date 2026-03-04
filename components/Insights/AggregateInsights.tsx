@@ -34,9 +34,11 @@ export function AggregateInsights({
     setCharacter,
     setAscension,
     setResult,
+    setIncludeDailies,
     filteredRuns,
     characters,
     ascensions,
+    hasDailyRuns,
   } = useRunFilters(runs);
 
   const overview = useMemo(
@@ -213,7 +215,7 @@ export function AggregateInsights({
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3 text-xs">
+        <div className="flex flex-wrap items-end gap-3 text-xs">
           <div className="flex flex-col">
             <label className="mb-1 text-[11px] font-semibold text-zinc-600">
               Character
@@ -268,6 +270,18 @@ export function AggregateInsights({
               <option value="loss">Losses only</option>
             </select>
           </div>
+
+          {hasDailyRuns && (
+            <label className="flex h-8 cursor-pointer items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-2.5 text-[11px] font-semibold text-amber-800 hover:bg-amber-100">
+              <input
+                type="checkbox"
+                className="accent-amber-500"
+                checked={!!filters.includeDailies}
+                onChange={(e) => setIncludeDailies(e.target.checked)}
+              />
+              Include Daily runs
+            </label>
+          )}
         </div>
       </section>
 

@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# STS Run Analyzer
+
+A client-side web app for analyzing your **Slay the Spire** run logs. Upload your `.run` files, explore individual runs, and view aggregate stats across your entire history — all stored locally in your browser with no backend required.
+
+## Features
+
+- **Aggregate insights** — win rate, average floor, card pick rates, relic occurrence, death breakdown, encounter averages, shop stats, and removed card stats across all your runs
+- **Single-run view** — final deck with card coloring (added / starting / upgraded), relics, card decisions, path overview with shop purchases inline, and gold per floor
+- **Daily Challenge support** — daily runs are identified automatically and their modifiers are displayed; they are excluded from aggregate stats by default with a toggle to include them
+- **Filters** — filter aggregate stats by character, ascension level, result (wins/losses), and daily runs
+- **Run management** — upload multiple files at once, delete individual runs, or clear all
+
+## Getting Your Run Files
+
+Slay the Spire saves run logs automatically. On Steam, they are located at:
+
+- **Windows:** `%APPDATA%\SlayTheSpire\runs\`
+- **macOS:** `~/Library/Application Support/SlayTheSpire/runs/`
+- **Linux:** `~/.local/share/SlayTheSpire/runs/`
+
+Each subfolder (`IRONCLAD`, `THE_SILENT`, `DEFECT`, `WATCHER`, `DAILY`) contains individual `.run` files.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Drag and drop your `.run` files onto the upload zone to get started.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- [Next.js 16](https://nextjs.org) (App Router, all client components)
+- [React 19](https://react.dev)
+- [Tailwind CSS 4](https://tailwindcss.com)
+- `localStorage` for persistence — no database, no backend, no accounts
 
-## Learn More
+## STS2
 
-To learn more about Next.js, take a look at the following resources:
+STS2 support will be added once the game is live and its run log format is documented. The codebase already has a detection hook in `lib/parser.ts` (`detectGame`) ready for extension.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy to [Vercel](https://vercel.com) with zero configuration — no environment variables needed. Connect your repo and deploy.
