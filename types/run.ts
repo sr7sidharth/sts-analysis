@@ -83,13 +83,7 @@ export type DeathStats = {
   mostCommonKilledBy?: string;
 };
 
-export type ShopCardStats = {
-  bought: number;
-  runsWithPurchase: number;
-  winsWithPurchase: number;
-};
-
-export type ShopRelicStats = {
+export type ShopItemStats = {
   bought: number;
   runsWithPurchase: number;
   winsWithPurchase: number;
@@ -99,7 +93,6 @@ export type RemovedCardStats = {
   timesRemoved: number;
   runsWithRemoval: number;
   winsWithRemoval: number;
-  avgFloor: number;
 };
 
 export type CardOccurrenceStats = {
@@ -110,8 +103,8 @@ export type CardOccurrenceStats = {
 };
 
 export type ShopStats = {
-  cards: Record<string, ShopCardStats>;
-  relics: Record<string, ShopRelicStats>;
+  cards: Record<string, ShopItemStats>;
+  relics: Record<string, ShopItemStats>;
 };
 
 export type EncounterAverages = {
@@ -123,6 +116,3 @@ export type EncounterAverages = {
   restSiteUpgrades: { wins: number; losses: number };
   cardRemovals: { wins: number; losses: number };
 };
-
-
-

@@ -49,7 +49,7 @@ export default function RunPage() {
   }
 
   return (
-    <main className="flex min-h-screen bg-zinc-50">
+    <main className="flex h-screen bg-zinc-50">
       <RunSidebar
         runs={runs}
         activeRunId={run.id}

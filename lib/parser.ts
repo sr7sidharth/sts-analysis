@@ -22,7 +22,7 @@ export function parseRunFileText(text: string): unknown {
   }
 }
 
-export function validateMinimalFields(raw: any): void {
+function validateMinimalFields(raw: any): void {
   const requiredObjectFields: Array<keyof any> = [
     "character_chosen",
     "floor_reached",

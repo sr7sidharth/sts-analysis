@@ -18,8 +18,8 @@ export function loadRuns(): Run[] {
       return [];
     }
 
-    return parsed.filter((item): item is Run => {
-      return (
+    const valid = parsed.filter(
+      (item): item is Run =>
         item &&
         typeof item === "object" &&
         typeof item.id === "string" &&
@@ -29,9 +29,14 @@ export function loadRuns(): Run[] {
         typeof item.floorReached === "number" &&
         typeof item.victory === "boolean" &&
         typeof item.score === "number" &&
-        typeof item.timestamp === "number"
-      );
-    });
+        typeof item.timestamp === "number",
+    );
+
+    // Rehydrate fields that may be missing from runs stored before a schema change.
+    return valid.map((run) => ({
+      ...run,
+      game: run.game ?? "STS1",
+    }));
   } catch {
     return [];
   }

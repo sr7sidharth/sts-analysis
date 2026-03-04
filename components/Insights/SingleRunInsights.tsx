@@ -7,7 +7,7 @@ import {
   getPathOverview,
   getRelicsForRun,
   getRemovedCardsForRun,
-  getShopInfoForRun,
+  getShopVisitsForRun,
   getGoldPerFloor,
 } from "@/lib/analytics";
 import { ScrollableTable } from "@/components/ScrollableTable";
@@ -32,7 +32,7 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
   const decisions = getCardDecisionRows(run);
   const path = getPathOverview(run);
   const removedCards = getRemovedCardsForRun(run);
-  const shopInfo = getShopInfoForRun(run);
+  const shopVisits = getShopVisitsForRun(run);
   const goldPoints = getGoldPerFloor(run);
 
   const date =
@@ -152,15 +152,12 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
               </p>
             ) : (
               <ul className="space-y-1 text-xs">
-                {removedCards.map((entry, index) => (
+                {removedCards.map((name, index) => (
                   <li
-                    key={`${entry.name}-${index}`}
-                    className="flex items-center justify-between rounded border border-red-100 bg-red-50 px-2 py-1 text-red-700"
+                    key={`${name}-${index}`}
+                    className="rounded border border-red-100 bg-red-50 px-2 py-1 text-red-700"
                   >
-                    <span className="font-medium">{entry.name}</span>
-                    <span className="text-[11px]">
-                      Floor {entry.floor ?? "?"}
-                    </span>
+                    <span className="font-medium">{name}</span>
                   </li>
                 ))}
               </ul>
@@ -208,7 +205,7 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
               rows={path.map((step) => {
                 const goldForFloor = goldPoints.find((p) => p.floor === step.floor);
                 const shopVisit = step.symbol === "$"
-                  ? shopInfo.visits.find((v) => v.floor === step.floor)
+                  ? shopVisits.find((v) => v.floor === step.floor)
                   : undefined;
                 const shopItems = shopVisit
                   ? [...shopVisit.cards, ...shopVisit.relics]

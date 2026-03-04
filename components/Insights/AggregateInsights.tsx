@@ -13,6 +13,8 @@ import {
   computeDeckSizeStats,
   computeEncounterAverages,
 } from "@/lib/analytics";
+import type { SortState } from "@/lib/sortUtils";
+import { toggleSort, sortIndicator } from "@/lib/sortUtils";
 import { useRunFilters } from "@/lib/useRunFilters";
 import { ScrollableTable } from "@/components/ScrollableTable";
 import type { ColumnDef } from "@/components/ScrollableTable";
@@ -22,24 +24,6 @@ type AggregateInsightsProps = {
   onSelectedCharacterChange?: (character: string | undefined) => void;
 };
 
-type SortState<T extends string> = { column: T; direction: "asc" | "desc" };
-
-function toggleSort<T extends string>(
-  prev: SortState<T>,
-  column: T,
-): SortState<T> {
-  return {
-    column,
-    direction: prev.column === column && prev.direction === "desc" ? "asc" : "desc",
-  };
-}
-
-function sortIndicator<T extends string>(
-  sort: SortState<T>,
-  column: T,
-): "asc" | "desc" | null {
-  return sort.column === column ? sort.direction : null;
-}
 
 export function AggregateInsights({
   runs,
