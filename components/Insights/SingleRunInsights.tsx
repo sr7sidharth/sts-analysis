@@ -61,9 +61,15 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
 
       <section className="grid gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
-          <h2 className="mb-2 text-sm font-semibold text-zinc-900">
-            Final Deck
-          </h2>
+          <div className="mb-2 flex items-baseline justify-between gap-2">
+            <h2 className="text-sm font-semibold text-zinc-900">Final Deck</h2>
+            {deck.length > 0 && (
+              <div className="text-[11px] text-zinc-600">
+                Deck size: <span className="font-semibold">{deck.length}</span>{" "}
+                cards
+              </div>
+            )}
+          </div>
           {deck.length === 0 ? (
             <p className="text-xs text-zinc-500">No deck data found.</p>
           ) : (

@@ -1,4 +1,4 @@
-import type { Run } from "@/types/run";
+import type { GameId, Run } from "@/types/run";
 
 export class RunParseError extends Error {
   constructor(message: string) {
@@ -72,6 +72,27 @@ function generateId(): string {
   return "run-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function detectGame(raw: any): GameId {
+  // Best-effort heuristic for now: STS1 logs are the only known format.
+  // When STS2 format is documented, extend this to look for STS2-specific keys.
+  const hasSts1Keys =
+    Array.isArray(raw?.path_per_floor) ||
+    Array.isArray(raw?.campfire_choices) ||
+    Array.isArray(raw?.damage_taken);
+
+  if (hasSts1Keys) {
+    return "STS1";
+  }
+
+  // Placeholder for future STS2 detection.
+  const hasSts2Keys = false;
+  if (hasSts2Keys) {
+    return "STS2";
+  }
+
+  return "unknown";
+}
+
 export function normalizeRun(raw: any): Run {
   validateMinimalFields(raw);
 
@@ -95,6 +116,7 @@ export function normalizeRun(raw: any): Run {
     killedBy: typeof raw.killed_by === "string" ? raw.killed_by : undefined,
     score: typeof raw.score === "number" ? raw.score : 0,
     timestamp,
+    game: detectGame(raw),
     raw,
   };
 

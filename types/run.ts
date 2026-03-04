@@ -1,3 +1,5 @@
+export type GameId = "STS1" | "STS2" | "unknown";
+
 export type Run = {
   /**
    * Local UUID used as the primary key in the UI.
@@ -18,6 +20,11 @@ export type Run = {
    * Falls back to Date.now() / 1000 when parsed.
    */
   timestamp: number;
+  /**
+   * Which Slay the Spire game this run comes from.
+   * Currently best-effort and used to keep analytics scoped while STS2 is in flux.
+   */
+  game: GameId;
   /**
    * Full raw run JSON as parsed from the .run/.json file.
    * This is intentionally untyped; analytics code will project what it needs.
@@ -48,12 +55,22 @@ export type CardStats = {
    * Number of wins among runs that contain this card.
    */
   winsWithCard: number;
+  /**
+   * Number of runs whose final deck contains this card and ended in a loss.
+   * (Derived as runsWithCard - winsWithCard in most views.)
+   */
+  lossesWithCard?: number;
 };
 
 export type RelicStats = {
   runsWithRelic: number;
   winCount: number;
   avgFloor: number;
+  /**
+   * Number of losses among runs that contain this relic.
+   * (Derived as runsWithRelic - winCount in most views.)
+   */
+  lossCount?: number;
 };
 
 export type OverviewStats = {
@@ -61,6 +78,12 @@ export type OverviewStats = {
   winRate: number;
   avgFloor: number;
   mostCommonDeath?: string;
+};
+
+export type DeckSizeStats = {
+  avgDeckSizeAll: number;
+  avgDeckSizeWins: number;
+  avgDeckSizeLosses: number;
 };
 
 export type DeathStats = {

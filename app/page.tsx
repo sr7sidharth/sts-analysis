@@ -64,7 +64,15 @@ export default function Home() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => clearAll()}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "This will permanently remove all locally stored runs from this browser. This cannot be undone.\n\nDo you want to delete all runs?",
+                      )
+                    ) {
+                      clearAll();
+                    }
+                  }}
                   className="rounded-full border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
                 >
                   Delete all runs

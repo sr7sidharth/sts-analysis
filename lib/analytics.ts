@@ -8,6 +8,7 @@ import type {
   ShopCardStats,
   ShopRelicStats,
   RemovedCardStats,
+  DeckSizeStats,
 } from "@/types/run";
 
 function normalizeCardName(name: string): string {
@@ -18,6 +19,10 @@ function normalizeCardName(name: string): string {
 
 export function filterRuns(runs: Run[], filters: RunFilters): Run[] {
   return runs.filter((run) => {
+    // Until STS2 is fully supported, restrict analytics to STS1 runs by default.
+    if (run.game && run.game !== "STS1") {
+      return false;
+    }
     if (filters.character && run.character !== filters.character) {
       return false;
     }
@@ -153,6 +158,8 @@ export function computeCardStats(runs: Run[]): Record<string, CardStats> {
         stat.runsWithCard += 1;
         if (run.victory) {
           stat.winsWithCard += 1;
+        } else {
+          stat.lossesWithCard = (stat.lossesWithCard ?? 0) + 1;
         }
       }
     }
@@ -201,6 +208,62 @@ export function computeCardStats(runs: Run[]): Record<string, CardStats> {
   }
 
   return stats;
+}
+
+export type CardOccurrenceStats = {
+  id: string;
+  runsWithCardOverall: number;
+  runsWithCardWins: number;
+  runsWithCardLosses: number;
+};
+
+export function computeCardOccurrenceStats(
+  runs: Run[],
+): CardOccurrenceStats[] {
+  const map = new Map<string, { overall: number; wins: number; losses: number }>();
+
+  for (const run of runs) {
+    const raw: any = run.raw;
+    const masterDeck: unknown = raw?.master_deck;
+    if (!Array.isArray(masterDeck)) continue;
+
+    const seen = new Set<string>();
+    for (const entry of masterDeck) {
+      if (typeof entry !== "string") continue;
+      const id = normalizeCardName(entry);
+      seen.add(id);
+    }
+
+    for (const id of seen) {
+      const record = map.get(id) ?? { overall: 0, wins: 0, losses: 0 };
+      record.overall += 1;
+      if (run.victory) {
+        record.wins += 1;
+      } else {
+        record.losses += 1;
+      }
+      map.set(id, record);
+    }
+  }
+
+  const result: CardOccurrenceStats[] = [];
+  for (const [id, record] of map.entries()) {
+    result.push({
+      id,
+      runsWithCardOverall: record.overall,
+      runsWithCardWins: record.wins,
+      runsWithCardLosses: record.losses,
+    });
+  }
+
+  result.sort((a, b) => {
+    if (b.runsWithCardOverall !== a.runsWithCardOverall) {
+      return b.runsWithCardOverall - a.runsWithCardOverall;
+    }
+    return a.id.localeCompare(b.id);
+  });
+
+  return result;
 }
 
 export function computeRelicStats(runs: Run[]): Record<string, RelicStats> {
@@ -656,6 +719,47 @@ export function getFinalDeck(run: Run): FinalDeckCard[] {
   return deck;
 }
 
+export function computeDeckSizeStats(runs: Run[]): DeckSizeStats {
+  if (runs.length === 0) {
+    return {
+      avgDeckSizeAll: 0,
+      avgDeckSizeWins: 0,
+      avgDeckSizeLosses: 0,
+    };
+  }
+
+  let totalAll = 0;
+  let countAll = 0;
+  let totalWins = 0;
+  let countWins = 0;
+  let totalLosses = 0;
+  let countLosses = 0;
+
+  for (const run of runs) {
+    const raw: any = run.raw;
+    const masterDeck: unknown = raw?.master_deck;
+    if (!Array.isArray(masterDeck)) continue;
+    const size = masterDeck.length;
+
+    totalAll += size;
+    countAll += 1;
+
+    if (run.victory) {
+      totalWins += size;
+      countWins += 1;
+    } else {
+      totalLosses += size;
+      countLosses += 1;
+    }
+  }
+
+  return {
+    avgDeckSizeAll: countAll > 0 ? totalAll / countAll : 0,
+    avgDeckSizeWins: countWins > 0 ? totalWins / countWins : 0,
+    avgDeckSizeLosses: countLosses > 0 ? totalLosses / countLosses : 0,
+  };
+}
+
 export function getRelicsForRun(run: Run): string[] {
   const raw: any = run.raw;
   const relics: unknown = raw?.relics;
@@ -822,6 +926,128 @@ export function getPathOverview(run: Run): PathStep[] {
   }
 
   return result;
+}
+
+export type EncounterAverages = {
+  monsters: { wins: number; losses: number };
+  elites: { wins: number; losses: number };
+  shops: { wins: number; losses: number };
+  events: { wins: number; losses: number };
+  rests: { wins: number; losses: number };
+  restSiteUpgrades: { wins: number; losses: number };
+  cardRemovals: { wins: number; losses: number };
+};
+
+export function computeEncounterAverages(runs: Run[]): EncounterAverages {
+  const makeBucket = () => ({ wins: 0, losses: 0 });
+
+  const totals = {
+    monsters: makeBucket(),
+    elites: makeBucket(),
+    shops: makeBucket(),
+    events: makeBucket(),
+    rests: makeBucket(),
+    restSiteUpgrades: makeBucket(),
+    cardRemovals: makeBucket(),
+  };
+
+  let winRuns = 0;
+  let lossRuns = 0;
+
+  for (const run of runs) {
+    const raw: any = run.raw;
+    const pathPerFloor: unknown = raw?.path_per_floor;
+    const campfireChoices: unknown = raw?.campfire_choices;
+    const itemsPurged: unknown = raw?.items_purged;
+
+    let monsters = 0;
+    let elites = 0;
+    let shops = 0;
+    let events = 0;
+    let restSites = 0;
+    let smiths = 0;
+    let removals = 0;
+
+    if (Array.isArray(pathPerFloor)) {
+      for (const value of pathPerFloor) {
+        if (typeof value !== "string") continue;
+        if (value === "M") monsters += 1;
+        else if (value === "E") elites += 1;
+        else if (value === "$") shops += 1;
+        else if (value === "?") events += 1;
+        else if (value === "R") restSites += 1;
+      }
+    }
+
+    if (Array.isArray(campfireChoices)) {
+      for (const choice of campfireChoices) {
+        if (typeof choice !== "object" || choice === null) continue;
+        const key = (choice as any).key;
+        if (key === "REST") {
+          // Count actual rests
+        } else if (key === "SMITH") {
+          smiths += 1;
+        }
+      }
+    }
+
+    if (Array.isArray(itemsPurged)) {
+      removals += itemsPurged.filter((x) => typeof x === "string").length;
+    }
+
+    const bucket =
+      run.victory
+        ? (() => {
+            winRuns += 1;
+            return "wins";
+          })()
+        : (() => {
+            lossRuns += 1;
+            return "losses";
+          })();
+
+    (totals.monsters as any)[bucket] += monsters;
+    (totals.elites as any)[bucket] += elites;
+    (totals.shops as any)[bucket] += shops;
+    (totals.events as any)[bucket] += events;
+    (totals.rests as any)[bucket] += restSites;
+    (totals.restSiteUpgrades as any)[bucket] += smiths;
+    (totals.cardRemovals as any)[bucket] += removals;
+  }
+
+  const safeDiv = (value: number, runsCount: number) =>
+    runsCount > 0 ? value / runsCount : 0;
+
+  return {
+    monsters: {
+      wins: safeDiv(totals.monsters.wins, winRuns),
+      losses: safeDiv(totals.monsters.losses, lossRuns),
+    },
+    elites: {
+      wins: safeDiv(totals.elites.wins, winRuns),
+      losses: safeDiv(totals.elites.losses, lossRuns),
+    },
+    shops: {
+      wins: safeDiv(totals.shops.wins, winRuns),
+      losses: safeDiv(totals.shops.losses, lossRuns),
+    },
+    events: {
+      wins: safeDiv(totals.events.wins, winRuns),
+      losses: safeDiv(totals.events.losses, lossRuns),
+    },
+    rests: {
+      wins: safeDiv(totals.rests.wins, winRuns),
+      losses: safeDiv(totals.rests.losses, lossRuns),
+    },
+    restSiteUpgrades: {
+      wins: safeDiv(totals.restSiteUpgrades.wins, winRuns),
+      losses: safeDiv(totals.restSiteUpgrades.losses, lossRuns),
+    },
+    cardRemovals: {
+      wins: safeDiv(totals.cardRemovals.wins, winRuns),
+      losses: safeDiv(totals.cardRemovals.losses, lossRuns),
+    },
+  };
 }
 
 // TODO: future analytics hooks

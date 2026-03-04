@@ -46,7 +46,15 @@ export default function OverviewPage() {
           <span>{runs.length} runs stored for analysis.</span>
           <button
             type="button"
-            onClick={() => clearAll()}
+            onClick={() => {
+              if (
+                window.confirm(
+                  "This will permanently remove all locally stored runs from this browser. This cannot be undone.\n\nDo you want to delete all runs?",
+                )
+              ) {
+                clearAll();
+              }
+            }}
             className="rounded-full border border-red-300 px-3 py-1.5 font-semibold text-red-700 hover:bg-red-50"
           >
             Delete all runs
