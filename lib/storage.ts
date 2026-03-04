@@ -36,6 +36,8 @@ export function loadRuns(): Run[] {
     return valid.map((run) => ({
       ...run,
       game: run.game ?? "STS1",
+      isDaily: run.isDaily ?? false,
+      dailyMods: run.dailyMods ?? [],
     }));
   } catch {
     return [];

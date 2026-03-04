@@ -43,13 +43,39 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
   return (
     <div className="flex flex-col gap-8">
       <section className="rounded-lg border border-zinc-200 bg-white px-4 py-4">
+        {run.isDaily && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+            <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+              Daily Challenge
+            </span>
+            {run.dailyMods.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {run.dailyMods.map((mod) => (
+                  <span
+                    key={mod}
+                    className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-800"
+                  >
+                    {mod}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-[11px] text-amber-700">No modifiers</span>
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap items-end justify-between gap-3 text-sm">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
               Run Summary
             </div>
             <div className="mt-1 text-lg font-semibold text-zinc-900">
-              {run.character} A{run.ascensionLevel}
+              {run.character}{" "}
+              {run.isDaily ? (
+                <span className="text-base font-normal text-zinc-500">Daily</span>
+              ) : (
+                `A${run.ascensionLevel}`
+              )}
             </div>
             <div className="mt-1 text-xs text-zinc-600">
               {date.toLocaleString()} &middot; Score {run.score}

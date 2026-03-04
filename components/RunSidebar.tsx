@@ -109,13 +109,20 @@ export function RunSidebar({
                           : "text-zinc-800 hover:bg-zinc-200"
                       }`}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-1">
                         <span className="font-semibold">{run.character}</span>
-                        <span
-                          className={`text-[10px] ${isActive ? "text-zinc-400" : "text-zinc-500"}`}
-                        >
-                          A{run.ascensionLevel}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          {run.isDaily && (
+                            <span className="rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-900">
+                              Daily
+                            </span>
+                          )}
+                          <span
+                            className={`text-[10px] ${isActive ? "text-zinc-400" : "text-zinc-500"}`}
+                          >
+                            {run.isDaily ? "" : `A${run.ascensionLevel}`}
+                          </span>
+                        </div>
                       </div>
                       <div
                         className={`mt-0.5 flex items-center justify-between text-[11px] ${isActive ? "text-zinc-300" : "text-zinc-600"}`}

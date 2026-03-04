@@ -106,6 +106,11 @@ export function normalizeRun(raw: any): Run {
       ? raw.victory
       : raw.floor_reached >= 50 || false;
 
+  const isDaily = raw.is_daily === true;
+  const dailyMods: string[] = isDaily && Array.isArray(raw.daily_mods)
+    ? raw.daily_mods.filter((m: unknown): m is string => typeof m === "string")
+    : [];
+
   const run: Run = {
     id: generateId(),
     sourcePlayId: raw.play_id,
@@ -117,6 +122,8 @@ export function normalizeRun(raw: any): Run {
     score: typeof raw.score === "number" ? raw.score : 0,
     timestamp,
     game: detectGame(raw),
+    isDaily,
+    dailyMods,
     raw,
   };
 

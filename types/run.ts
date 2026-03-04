@@ -26,6 +26,15 @@ export type Run = {
    */
   game: GameId;
   /**
+   * Whether this was a Daily Challenge run (is_daily === true in the raw log).
+   */
+  isDaily: boolean;
+  /**
+   * Active modifiers for a Daily Challenge run (daily_mods in the raw log).
+   * Empty array for non-daily runs.
+   */
+  dailyMods: string[];
+  /**
    * Full raw run JSON as parsed from the .run/.json file.
    * This is intentionally untyped; analytics code will project what it needs.
    */
