@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { GameId, Run } from "@/types/run";
+import { getPotionsUsed } from "@/lib/analytics";
 import { getAnalyticsStrategyForGame } from "@/lib/analytics/strategies";
 import type { SortState } from "@/lib/sortUtils";
 import { toggleSort, sortIndicator } from "@/lib/sortUtils";
@@ -47,6 +48,10 @@ export function AggregateInsights({
     () => strategy.computeDeckSizeStats(filteredRuns),
     [strategy, filteredRuns],
   );
+  const relicSizeStats = useMemo(
+    () => strategy.computeRelicSizeStats(filteredRuns),
+    [strategy, filteredRuns],
+  );
   const deathStats = useMemo(
     () => strategy.computeDeathStats(filteredRuns),
     [strategy, filteredRuns],
@@ -75,6 +80,34 @@ export function AggregateInsights({
     () => strategy.computeEncounterAverages(filteredRuns),
     [strategy, filteredRuns],
   );
+
+  const potionsUsedStats = useMemo(() => {
+    let totalAll = 0;
+    let countAll = 0;
+    let totalWins = 0;
+    let countWins = 0;
+    let totalLosses = 0;
+    let countLosses = 0;
+    for (const run of filteredRuns) {
+      const v = getPotionsUsed(run, 0);
+      if (v == null) continue;
+      totalAll += v;
+      countAll += 1;
+      if (run.victory) {
+        totalWins += v;
+        countWins += 1;
+      } else {
+        totalLosses += v;
+        countLosses += 1;
+      }
+    }
+    if (countAll === 0) return null;
+    return {
+      avgAll: totalAll / countAll,
+      avgWins: countWins > 0 ? totalWins / countWins : 0,
+      avgLosses: countLosses > 0 ? totalLosses / countLosses : 0,
+    };
+  }, [filteredRuns]);
 
   // ── Card pick rate sort ──────────────────────────────────────────────────
   type CardPickCol = "name" | "offered" | "picked" | "pickRate" | "winRate" | "skipRate";
@@ -318,6 +351,47 @@ export function AggregateInsights({
             </div>
           </div>
         </div>
+        <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3 md:col-span-4">
+          <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Relic Size</div>
+          <div className="mt-2 grid grid-cols-3 gap-4 text-xs text-zinc-800 md:text-sm">
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-zinc-500">Avg – All</div>
+              <div className="mt-0.5 font-semibold">{relicSizeStats.avgRelicSizeAll.toFixed(1)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-zinc-500">Avg – Wins</div>
+              <div className="mt-0.5 font-semibold">{relicSizeStats.avgRelicSizeWins.toFixed(1)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-zinc-500">Avg – Losses</div>
+              <div className="mt-0.5 font-semibold">{relicSizeStats.avgRelicSizeLosses.toFixed(1)}</div>
+            </div>
+          </div>
+        </div>
+        {potionsUsedStats != null && (
+          <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3 md:col-span-4">
+            <div
+              className="text-[11px] font-medium uppercase tracking-wide text-zinc-500"
+              title="This might be inaccurate if you generate potions within a combat"
+            >
+              Potions used
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-4 text-xs text-zinc-800 md:text-sm">
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-zinc-500">Avg – All</div>
+                <div className="mt-0.5 font-semibold">{potionsUsedStats.avgAll.toFixed(1)}</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-zinc-500">Avg – Wins</div>
+                <div className="mt-0.5 font-semibold">{potionsUsedStats.avgWins.toFixed(1)}</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-zinc-500">Avg – Losses</div>
+                <div className="mt-0.5 font-semibold">{potionsUsedStats.avgLosses.toFixed(1)}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ── All tables — each is its own grid cell so heights don't equalise ── */}

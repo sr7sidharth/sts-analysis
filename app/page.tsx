@@ -52,6 +52,26 @@ export default function Home() {
           errors={errors}
         />
 
+        <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs text-zinc-600">
+          <p className="mb-2 font-semibold text-zinc-700">Where to find run files</p>
+          <ul className="space-y-1.5">
+            <li>
+              <span className="font-medium text-zinc-800">STS1:</span>{" "}
+              <span className="font-mono text-[11px]">
+                steamapps\common\SlayTheSpire\runs
+              </span>
+              <span className="ml-1">(same folder as the game install)</span>
+            </li>
+            <li>
+              <span className="font-medium text-zinc-800">STS2:</span>{" "}
+              <span className="font-mono text-[11px]">
+                Users\&lt;username&gt;\AppData\Roaming\SlayTheSpire2\steam\&lt;steam id&gt;\profile_&lt;num&gt;\saves\history
+              </span>
+              <span className="ml-1">(where saves are stored)</span>
+            </li>
+          </ul>
+        </div>
+
         <footer className="mt-6 flex items-center justify-between text-xs text-zinc-500">
           <span>
             Stored runs:{" "}

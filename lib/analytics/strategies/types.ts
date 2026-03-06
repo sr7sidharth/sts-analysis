@@ -6,6 +6,7 @@ import type {
   EncounterAverages,
   GameId,
   OverviewStats,
+  RelicSizeStats,
   RelicStats,
   RemovedCardStats,
   Run,
@@ -26,6 +27,7 @@ export interface GameAnalyticsStrategy {
   computeShopStats(runs: Run[]): ShopStats;
   computeRemovedCardStats(runs: Run[]): Record<string, RemovedCardStats>;
   computeDeckSizeStats(runs: Run[]): DeckSizeStats;
+  computeRelicSizeStats(runs: Run[]): RelicSizeStats;
   computeEncounterAverages(runs: Run[]): EncounterAverages;
 }
 

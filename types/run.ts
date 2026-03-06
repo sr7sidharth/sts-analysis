@@ -87,6 +87,12 @@ export type DeckSizeStats = {
   avgDeckSizeLosses: number;
 };
 
+export type RelicSizeStats = {
+  avgRelicSizeAll: number;
+  avgRelicSizeWins: number;
+  avgRelicSizeLosses: number;
+};
+
 export type DeathStats = {
   deathCounts: Record<string, number>;
   averageFloor: number;

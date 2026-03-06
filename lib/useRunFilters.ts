@@ -10,7 +10,6 @@ export type UseRunFiltersResult = {
   setAscension: (ascension: number | undefined) => void;
   setResult: (result: RunFilters["result"]) => void;
   setIncludeDailies: (include: boolean) => void;
-  resetFilters: () => void;
   filteredRuns: Run[];
   characters: string[];
   ascensions: number[];
@@ -59,17 +58,12 @@ export function useRunFilters(runs: Run[]): UseRunFiltersResult {
     setFilters((prev) => ({ ...prev, includeDailies: include || undefined }));
   }, []);
 
-  const resetFilters = useCallback(() => {
-    setFilters({});
-  }, []);
-
   return {
     filters,
     setCharacter,
     setAscension,
     setResult,
     setIncludeDailies,
-    resetFilters,
     filteredRuns,
     characters,
     ascensions,

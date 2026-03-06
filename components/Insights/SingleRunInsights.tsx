@@ -7,6 +7,7 @@ import {
   getCardDecisionRows,
   getFinalDeck,
   getPathOverview,
+  getPotionsUsed,
   getRelicsForRun,
   getRelicsWithFloors,
   getRemovedCardsWithFloors,
@@ -153,30 +154,10 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
       ? new Date(run.timestamp * 1000)
       : new Date();
 
-  // Simple potion usage summary for STS2: count all potion_used entries in map_point_history.
-  let potionsUsed: number | null = null;
-  if (run.game === "STS2") {
-    const raw: any = run.raw;
-    if (Array.isArray(raw?.map_point_history)) {
-      let count = 0;
-      for (const act of raw.map_point_history) {
-        if (!Array.isArray(act)) continue;
-        for (const point of act) {
-          if (!point || typeof point !== "object") continue;
-          const statsArr: unknown = (point as any).player_stats;
-          if (!Array.isArray(statsArr)) continue;
-          for (const stats of statsArr) {
-            if (!stats || typeof stats !== "object") continue;
-            const used: unknown = (stats as any).potion_used;
-            if (Array.isArray(used)) {
-              count += used.length;
-            }
-          }
-        }
-      }
-      potionsUsed = count;
-    }
-  }
+  const potionsUsed = getPotionsUsed(
+    run,
+    hasMultiplePlayers ? selectedPlayerIndex : 0,
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -253,7 +234,10 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
                   : "Defeat"}
             </div>
             {potionsUsed != null && (
-              <div className="mt-1 text-zinc-600">
+              <div
+                className="mt-1 text-zinc-600"
+                title="This might be inaccurate if you generate potions within a combat"
+              >
                 Potions used: {potionsUsed}
               </div>
             )}

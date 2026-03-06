@@ -5,6 +5,7 @@ import type {
   DeckSizeStats,
   EncounterAverages,
   OverviewStats,
+  RelicSizeStats,
   RelicStats,
   RemovedCardStats,
   Run,
@@ -22,10 +23,6 @@ import {
   getRaw,
   normalizeCardName,
 } from "./helpers";
-import {
-  extractSts2ShopPurchases,
-  summarizeSts2Encounters,
-} from "./sts2Projection";
 
 export function filterRuns(runs: Run[], filters: RunFilters): Run[] {
   return runs.filter((run) => {
@@ -331,33 +328,18 @@ export function computeShopStats(runs: Run[]): ShopStats {
     const seenCardThisRun = new Set<string>();
     const seenRelicThisRun = new Set<string>();
 
-    let itemsToProcess: { cardId?: string; relicId?: string }[] = [];
+    const raw = getRaw(run);
+    const itemsPurchased: unknown = raw?.items_purchased;
+    if (!Array.isArray(itemsPurchased)) continue;
 
-    if (run.game === "STS2") {
-      const purchases = extractSts2ShopPurchases(run);
-      for (const id of purchases.cards) {
-        const cardId = normalizeCardName(id);
-        if (deckIds.has(cardId)) {
-          itemsToProcess.push({ cardId });
-        }
-      }
-      for (const id of purchases.relics) {
-        if (relicSet.has(id)) {
-          itemsToProcess.push({ relicId: id });
-        }
-      }
-    } else {
-      const raw = getRaw(run);
-      const itemsPurchased: unknown = raw?.items_purchased;
-      if (!Array.isArray(itemsPurchased)) continue;
-      for (const item of itemsPurchased) {
-        if (typeof item !== "string") continue;
-        const cardId = normalizeCardName(item);
-        if (deckIds.has(cardId)) {
-          itemsToProcess.push({ cardId });
-        } else if (relicSet.has(item)) {
-          itemsToProcess.push({ relicId: item });
-        }
+    const itemsToProcess: { cardId?: string; relicId?: string }[] = [];
+    for (const item of itemsPurchased) {
+      if (typeof item !== "string") continue;
+      const cardId = normalizeCardName(item);
+      if (deckIds.has(cardId)) {
+        itemsToProcess.push({ cardId });
+      } else if (relicSet.has(item)) {
+        itemsToProcess.push({ relicId: item });
       }
     }
 
@@ -474,6 +456,45 @@ export function computeDeckSizeStats(runs: Run[]): DeckSizeStats {
   };
 }
 
+export function computeRelicSizeStats(runs: Run[]): RelicSizeStats {
+  if (runs.length === 0) {
+    return {
+      avgRelicSizeAll: 0,
+      avgRelicSizeWins: 0,
+      avgRelicSizeLosses: 0,
+    };
+  }
+
+  let totalAll = 0;
+  let countAll = 0;
+  let totalWins = 0;
+  let countWins = 0;
+  let totalLosses = 0;
+  let countLosses = 0;
+
+  for (const run of runs) {
+    const relics = getRelicsRaw(run);
+    const size = relics.length;
+
+    totalAll += size;
+    countAll += 1;
+
+    if (run.victory) {
+      totalWins += size;
+      countWins += 1;
+    } else {
+      totalLosses += size;
+      countLosses += 1;
+    }
+  }
+
+  return {
+    avgRelicSizeAll: countAll > 0 ? totalAll / countAll : 0,
+    avgRelicSizeWins: countWins > 0 ? totalWins / countWins : 0,
+    avgRelicSizeLosses: countLosses > 0 ? totalLosses / countLosses : 0,
+  };
+}
+
 export function computeEncounterAverages(runs: Run[]): EncounterAverages {
   const makeBucket = () => ({ wins: 0, losses: 0 });
 
@@ -491,6 +512,10 @@ export function computeEncounterAverages(runs: Run[]): EncounterAverages {
   let lossRuns = 0;
 
   for (const run of runs) {
+    const pathPerFloor = getPathPerFloorRaw(run);
+    const campfireChoices = getCampfireChoicesRaw(run);
+    const itemsPurged = getItemsPurgedRaw(run);
+
     let monsters = 0;
     let elites = 0;
     let shops = 0;
@@ -499,40 +524,25 @@ export function computeEncounterAverages(runs: Run[]): EncounterAverages {
     let smiths = 0;
     let removals = 0;
 
-    if (run.game === "STS2") {
-      const summary = summarizeSts2Encounters(run);
-      monsters = summary.monsters;
-      elites = summary.elites;
-      shops = summary.shops;
-      events = summary.events;
-      restSites = summary.restSites;
-      smiths = summary.smiths;
-      removals = summary.cardRemovals;
-    } else {
-      const pathPerFloor = getPathPerFloorRaw(run);
-      const campfireChoices = getCampfireChoicesRaw(run);
-      const itemsPurged = getItemsPurgedRaw(run);
-
-      if (pathPerFloor.length > 0) {
-        for (const value of pathPerFloor) {
-          if (value === "M") monsters += 1;
-          else if (value === "E") elites += 1;
-          else if (value === "$") shops += 1;
-          else if (value === "?") events += 1;
-          else if (value === "R") restSites += 1;
-        }
+    if (pathPerFloor.length > 0) {
+      for (const value of pathPerFloor) {
+        if (value === "M") monsters += 1;
+        else if (value === "E") elites += 1;
+        else if (value === "$") shops += 1;
+        else if (value === "?") events += 1;
+        else if (value === "R") restSites += 1;
       }
-
-      if (campfireChoices.length > 0) {
-        for (const choice of campfireChoices) {
-          if (typeof choice !== "object" || choice === null) continue;
-          const key = (choice as any).key;
-          if (key === "SMITH") smiths += 1;
-        }
-      }
-
-      removals = itemsPurged.length;
     }
+
+    if (campfireChoices.length > 0) {
+      for (const choice of campfireChoices) {
+        if (typeof choice !== "object" || choice === null) continue;
+        const key = (choice as any).key;
+        if (key === "SMITH") smiths += 1;
+      }
+    }
+
+    removals = itemsPurged.length;
 
     const bucket =
       run.victory

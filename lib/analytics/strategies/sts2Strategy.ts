@@ -4,17 +4,17 @@ import {
   computeCardStats,
   computeDeathStats,
   computeDeckSizeStats,
-  computeEncounterAverages,
   computeOverviewStats,
+  computeRelicSizeStats,
   computeRelicStats,
   computeRemovedCardStats,
-  computeShopStats,
 } from "../aggregate";
+import {
+  computeSts2EncounterAverages,
+  computeSts2ShopStats,
+} from "../sts2Aggregate";
 import type { GameAnalyticsStrategy } from "./types";
 
-// For now, STS2 shares the same aggregate calculations as STS1, operating on
-// the normalized Run type. STS2-specific behavior is implemented in helpers
-// and parser normalization, so this strategy remains a thin wrapper.
 export const sts2AnalyticsStrategy: GameAnalyticsStrategy = {
   game: "STS2",
 
@@ -39,7 +39,7 @@ export const sts2AnalyticsStrategy: GameAnalyticsStrategy = {
   },
 
   computeShopStats(runs: Run[]) {
-    return computeShopStats(runs);
+    return computeSts2ShopStats(runs);
   },
 
   computeRemovedCardStats(runs: Run[]) {
@@ -50,8 +50,12 @@ export const sts2AnalyticsStrategy: GameAnalyticsStrategy = {
     return computeDeckSizeStats(runs);
   },
 
+  computeRelicSizeStats(runs: Run[]) {
+    return computeRelicSizeStats(runs);
+  },
+
   computeEncounterAverages(runs: Run[]) {
-    return computeEncounterAverages(runs);
+    return computeSts2EncounterAverages(runs);
   },
 };
 

@@ -1,4 +1,4 @@
-export function stripNamespace(id: string): string {
+function stripNamespace(id: string): string {
   if (typeof id !== "string") return id as unknown as string;
 
   const prefixes = [
@@ -20,7 +20,7 @@ export function stripNamespace(id: string): string {
   return id;
 }
 
-export function toTitleCaseFromId(base: string): string {
+function toTitleCaseFromId(base: string): string {
   if (!base) return base;
 
   const normalized = base.replace(/\./g, "_");

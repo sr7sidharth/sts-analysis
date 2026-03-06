@@ -1,4 +1,5 @@
 import type { Run } from "@/types/run";
+import type { CardDecisionContext } from "./types";
 import { getRaw } from "./helpers";
 
 type Sts2Like = any;
@@ -20,24 +21,6 @@ export function extractSts2CardChoices(run: Run): any[] {
         if (!stats || typeof stats !== "object") continue;
         const rawChoices: unknown = (stats as any).card_choices;
         if (!Array.isArray(rawChoices)) continue;
-
-        for (const choice of rawChoices) {
-          if (!choice || typeof choice !== "object") continue;
-          const card: any = (choice as any).card;
-          if (!card || typeof card !== "object") continue;
-
-          const id: unknown = card.id;
-          const floorAdded: unknown = card.floor_added_to_deck;
-          const wasPicked: unknown = (choice as any).was_picked;
-          if (typeof id !== "string") continue;
-
-          const floor =
-            typeof floorAdded === "number" ? floorAdded : (null as number | null);
-
-          // In STS2, each choice is represented as its own structure; we treat non-picked
-          // options as coming from the same group via the surrounding array.
-          // To keep a simple STS1-like shape, we accumulate within this array pass.
-        }
 
         // Rebuild an STS1-style group from this card_choices array.
         const group: any = {
@@ -390,13 +373,6 @@ export function getSts2ShopVisits(
   }
 
   return visits;
-}
-
-export interface CardDecisionContext {
-  relics: string[];
-  deck: string[];
-  gold: number;
-  potions: string[];
 }
 
 function buildDeckAtFloor(

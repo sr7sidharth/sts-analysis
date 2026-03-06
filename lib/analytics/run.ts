@@ -1,4 +1,5 @@
 import type { Run } from "@/types/run";
+import type { CardDecisionContext, ItemWithFloor } from "./types";
 import {
   getCardChoicesRaw,
   getCampfireChoicesRaw,
@@ -223,7 +224,36 @@ export function getRelicsForRun(run: Run, playerIndex?: number): string[] {
   return getRelicsRaw(run, playerIndex);
 }
 
-export type ItemWithFloor = { id: string; floor?: number };
+/**
+ * Returns the number of potions used in a run (STS2 only).
+ * Counts potion_used entries in map_point_history.
+ * May be inaccurate if potions are generated within combat.
+ */
+export function getPotionsUsed(run: Run, playerIndex?: number): number | null {
+  if (run.game !== "STS2") return null;
+  const raw: any = getRaw(run);
+  if (!Array.isArray(raw?.map_point_history)) return null;
+
+  const players = Array.isArray(raw?.players) ? raw.players : [];
+  const idx = Math.min(Math.max(0, playerIndex ?? 0), Math.max(0, players.length - 1));
+
+  let count = 0;
+  for (const act of raw.map_point_history) {
+    if (!Array.isArray(act)) continue;
+    for (const point of act) {
+      if (!point || typeof point !== "object") continue;
+      const statsArr: unknown = (point as any).player_stats;
+      if (!Array.isArray(statsArr)) continue;
+      const stats = statsArr[idx];
+      if (!stats || typeof stats !== "object") continue;
+      const used: unknown = (stats as any).potion_used;
+      if (Array.isArray(used)) {
+        count += used.length;
+      }
+    }
+  }
+  return count;
+}
 
 export function getRelicsWithFloors(
   run: Run,
@@ -258,13 +288,6 @@ export function getRemovedCardsWithFloors(
   const ids = getItemsPurgedRaw(run);
   return ids.map((id) => ({ id, floor: undefined }));
 }
-
-export type CardDecisionContext = {
-  relics: string[];
-  deck: string[];
-  gold: number;
-  potions: string[];
-};
 
 export function getCardDecisionRows(run: Run): CardDecisionRow[] {
   const choices = getCardChoicesRaw(run);
@@ -548,7 +571,3 @@ export function getGoldPerFloor(run: Run, playerIndex?: number): GoldPoint[] {
   return goldPerFloor.map((gold, i) => ({ floor: i + 1, gold }));
 }
 
-/** Returns card names removed at the card-removal shrines/events for this run. */
-export function getRemovedCardsForRun(run: Run): string[] {
-  return getItemsPurgedRaw(run);
-}

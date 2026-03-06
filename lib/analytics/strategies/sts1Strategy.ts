@@ -6,6 +6,7 @@ import {
   computeDeckSizeStats,
   computeEncounterAverages,
   computeOverviewStats,
+  computeRelicSizeStats,
   computeRelicStats,
   computeRemovedCardStats,
   computeShopStats,
@@ -45,6 +46,10 @@ export const sts1AnalyticsStrategy: GameAnalyticsStrategy = {
 
   computeDeckSizeStats(runs: Run[]) {
     return computeDeckSizeStats(runs);
+  },
+
+  computeRelicSizeStats(runs: Run[]) {
+    return computeRelicSizeStats(runs);
   },
 
   computeEncounterAverages(runs: Run[]) {

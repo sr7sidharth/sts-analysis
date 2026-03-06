@@ -8,6 +8,7 @@ export {
   computeShopStats,
   computeRemovedCardStats,
   computeDeckSizeStats,
+  computeRelicSizeStats,
   computeEncounterAverages,
 } from "./aggregate";
 
@@ -16,10 +17,10 @@ export {
   getRelicsForRun,
   getRelicsWithFloors,
   getRemovedCardsWithFloors,
+  getPotionsUsed,
   getCardDecisionRows,
   getCardDecisionContext,
   getPathOverview,
   getShopVisitsForRun,
   getGoldPerFloor,
-  getRemovedCardsForRun,
 } from "./run";
