@@ -1,20 +1,34 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { RunSidebar } from "@/components/RunSidebar";
 import { SingleRunInsights } from "@/components/Insights/SingleRunInsights";
 import { useRuns } from "@/lib/useRuns";
+import { formatIdLabel } from "@/lib/labels";
 
 export default function RunPage() {
   const params = useParams<{ runId: string }>();
   const router = useRouter();
   const { runs, removeRun } = useRuns();
+  const [selectedCharacter, setSelectedCharacter] = useState<string | undefined>(undefined);
 
   const run = useMemo(
     () => runs.find((r) => r.id === params.runId),
     [runs, params.runId],
   );
+
+  const runsForSameGame = useMemo(
+    () => (run ? runs.filter((r) => r.game === run.game) : []),
+    [runs, run],
+  );
+
+  const charactersInGame = useMemo(
+    () => Array.from(new Set(runsForSameGame.map((r) => r.character).filter(Boolean))).sort(),
+    [runsForSameGame],
+  );
+
+  const activeCharacter = selectedCharacter ?? run?.character;
 
   if (!run) {
     return (
@@ -48,14 +62,12 @@ export default function RunPage() {
     );
   }
 
-  const runsForSameGame = runs.filter((r) => r.game === run.game);
-
   return (
     <main className="flex h-screen bg-zinc-50">
       <RunSidebar
         runs={runsForSameGame}
         activeRunId={run.id}
-        activeCharacter={run.character}
+        activeCharacter={activeCharacter}
         onDeleteRun={(id) => {
           removeRun(id);
           if (id === run.id) {
@@ -64,21 +76,36 @@ export default function RunPage() {
         }}
       />
       <section className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="mb-4 flex items-center justify-between text-xs text-zinc-600">
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="rounded-full border border-zinc-300 px-3 py-1.5 font-semibold text-zinc-800 hover:bg-zinc-100"
-          >
-            Upload runs
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/run/overview")}
-            className="rounded-full bg-zinc-900 px-3 py-1.5 font-semibold text-white hover:bg-zinc-800"
-          >
-            Overview
-          </button>
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-3 text-xs text-zinc-600">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="rounded-full border border-zinc-300 px-3 py-1.5 font-semibold text-zinc-800 hover:bg-zinc-100"
+            >
+              Upload runs
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/run/overview")}
+              className="rounded-full bg-zinc-900 px-3 py-1.5 font-semibold text-white hover:bg-zinc-800"
+            >
+              Overview
+            </button>
+            {charactersInGame.length > 1 && (
+              <select
+                value={activeCharacter ?? ""}
+                onChange={(e) => setSelectedCharacter(e.target.value || undefined)}
+                className="rounded-full border border-zinc-300 bg-white px-3 py-1.5 font-semibold text-zinc-800"
+              >
+                {charactersInGame.map((c) => (
+                  <option key={c} value={c}>
+                    {formatIdLabel(c)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
         <SingleRunInsights run={run} />
       </section>

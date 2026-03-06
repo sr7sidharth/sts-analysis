@@ -3,16 +3,118 @@
 import { useState } from "react";
 import type { Run } from "@/types/run";
 import {
+  getCardDecisionContext,
   getCardDecisionRows,
   getFinalDeck,
   getPathOverview,
   getRelicsForRun,
-  getRemovedCardsForRun,
+  getRelicsWithFloors,
+  getRemovedCardsWithFloors,
   getShopVisitsForRun,
   getGoldPerFloor,
 } from "@/lib/analytics";
 import { ScrollableTable } from "@/components/ScrollableTable";
 import { formatIdLabel } from "@/lib/labels";
+
+function ContextModal({
+  run,
+  floor,
+  playerIndex,
+  onClose,
+}: {
+  run: Run;
+  floor: number;
+  playerIndex: number;
+  onClose: () => void;
+}) {
+  const context = getCardDecisionContext(run, floor, playerIndex);
+  if (!context) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={0}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-zinc-900">
+            Context at floor {floor}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+          >
+            ×
+          </button>
+        </div>
+        <div className="space-y-3 text-xs">
+          <div>
+            <div className="font-semibold text-zinc-600">Gold</div>
+            <div className="text-zinc-800">{context.gold}</div>
+          </div>
+          <div>
+            <div className="font-semibold text-zinc-600">Relics</div>
+            <div className="flex flex-wrap gap-1 text-zinc-800">
+              {context.relics.length === 0 ? (
+                <span className="text-zinc-500">None</span>
+              ) : (
+                context.relics.map((r, i) => (
+                  <span
+                    key={`${r}-${i}`}
+                    className="rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5"
+                  >
+                    {formatIdLabel(r)}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="font-semibold text-zinc-600">Deck</div>
+            <div className="flex flex-wrap gap-1 text-zinc-800">
+              {context.deck.length === 0 ? (
+                <span className="text-zinc-500">Empty</span>
+              ) : (
+                context.deck.map((c, i) => (
+                  <span
+                    key={`${c}-${i}`}
+                    className="rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5"
+                  >
+                    {formatIdLabel(c)}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="font-semibold text-zinc-600">Potions</div>
+            <div className="flex flex-wrap gap-1 text-zinc-800">
+              {context.potions.length === 0 ? (
+                <span className="text-zinc-500">None</span>
+              ) : (
+                context.potions.map((p, i) => (
+                  <span
+                    key={`${p}-${i}`}
+                    className="rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5"
+                  >
+                    {formatIdLabel(p)}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const SYMBOL_LABEL: Record<string, string> = {
   M: "Monster",
@@ -34,15 +136,17 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
   const hasMultiplePlayers = run.game === "STS2" && players.length > 1;
 
   const [selectedPlayerIndex, setSelectedPlayerIndex] = useState(0);
+  const [contextModalFloor, setContextModalFloor] = useState<number | null>(null);
   const effectivePlayerIndex = hasMultiplePlayers ? selectedPlayerIndex : 0;
 
   const deck = getFinalDeck(run, effectivePlayerIndex);
   const relics = getRelicsForRun(run, effectivePlayerIndex);
+  const relicsWithFloors = getRelicsWithFloors(run, effectivePlayerIndex);
   const decisions = getCardDecisionRows(run);
   const path = getPathOverview(run);
-  const removedCards = getRemovedCardsForRun(run);
-  const shopVisits = getShopVisitsForRun(run);
-  const goldPoints = getGoldPerFloor(run);
+  const removedCardsWithFloors = getRemovedCardsWithFloors(run, effectivePlayerIndex);
+  const shopVisits = getShopVisitsForRun(run, effectivePlayerIndex);
+  const goldPoints = getGoldPerFloor(run, effectivePlayerIndex);
 
   const date =
     typeof run.timestamp === "number"
@@ -212,17 +316,29 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
 
         <div className="space-y-4">
           <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
-            <h2 className="mb-2 text-sm font-semibold text-zinc-900">Relics</h2>
-            {relics.length === 0 ? (
+            <div className="mb-2 flex items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold text-zinc-900">Relics</h2>
+              {relicsWithFloors.length > 0 && (
+                <span className="text-[11px] text-zinc-600">
+                  {relicsWithFloors.length} total
+                </span>
+              )}
+            </div>
+            {relicsWithFloors.length === 0 ? (
               <p className="text-xs text-zinc-500">No relics found.</p>
             ) : (
               <ul className="flex flex-wrap gap-1 text-xs">
-                {relics.map((relic) => (
+                {relicsWithFloors.map((item, i) => (
                   <li
-                    key={relic}
+                    key={`${item.id}-${i}`}
                     className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-zinc-800"
                   >
-                    {formatIdLabel(relic)}
+                    {formatIdLabel(item.id)}
+                    {item.floor != null && (
+                      <span className="ml-1 text-zinc-500">
+                        (floor {item.floor})
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -230,21 +346,33 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
           </div>
 
           <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
-            <h2 className="mb-2 text-sm font-semibold text-zinc-900">
-              Removed Cards
-            </h2>
-            {removedCards.length === 0 ? (
+            <div className="mb-2 flex items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold text-zinc-900">
+                Removed Cards
+              </h2>
+              {removedCardsWithFloors.length > 0 && (
+                <span className="text-[11px] text-zinc-600">
+                  {removedCardsWithFloors.length} removed
+                </span>
+              )}
+            </div>
+            {removedCardsWithFloors.length === 0 ? (
               <p className="text-xs text-zinc-500">
                 No cards were permanently removed in this run.
               </p>
             ) : (
               <ul className="space-y-1 text-xs">
-                {removedCards.map((name, index) => (
+                {removedCardsWithFloors.map((item, index) => (
                   <li
-                    key={`${name}-${index}`}
+                    key={`${item.id}-${index}`}
                     className="rounded border border-red-100 bg-red-50 px-2 py-1 text-red-700"
                   >
-                    <span className="font-medium">{formatIdLabel(name)}</span>
+                    <span className="font-medium">{formatIdLabel(item.id)}</span>
+                    {item.floor != null && (
+                      <span className="ml-1 text-red-600">
+                        (removed floor {item.floor})
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -264,20 +392,46 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
               { label: "Floor" },
               { label: "Picked" },
               { label: "Skipped" },
+              { label: "Context" },
             ]}
             emptyMessage="No card choice data available."
-            rows={decisions.map((row, index) => [
-              <span key={index} className="text-zinc-700">{row.floor ?? "—"}</span>,
-              <span className="text-zinc-800">
-                {row.picked ? formatIdLabel(row.picked) : "—"}
-              </span>,
-              <span className="text-zinc-700">
-                {row.skipped.length > 0
-                  ? row.skipped.map((name) => formatIdLabel(name)).join(", ")
-                  : "—"}
-              </span>,
-            ])}
+            rows={decisions.map((row, index) => {
+              const floor = row.floor;
+              const hasContext =
+                typeof floor === "number" &&
+                getCardDecisionContext(run, floor, effectivePlayerIndex) != null;
+              return [
+                <span key={index} className="text-zinc-700">{row.floor ?? "—"}</span>,
+                <span className="text-zinc-800">
+                  {row.picked ? formatIdLabel(row.picked) : "—"}
+                </span>,
+                <span className="text-zinc-700">
+                  {row.skipped.length > 0
+                    ? row.skipped.map((name) => formatIdLabel(name)).join(", ")
+                    : "—"}
+                </span>,
+                hasContext ? (
+                  <button
+                    type="button"
+                    onClick={() => setContextModalFloor(floor)}
+                    className="text-xs font-medium text-zinc-600 underline hover:text-zinc-900"
+                  >
+                    View
+                  </button>
+                ) : (
+                  <span className="text-zinc-400">—</span>
+                ),
+              ];
+            })}
           />
+          {contextModalFloor != null && (
+            <ContextModal
+              run={run}
+              floor={contextModalFloor}
+              playerIndex={effectivePlayerIndex}
+              onClose={() => setContextModalFloor(null)}
+            />
+          )}
         </div>
 
         <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">

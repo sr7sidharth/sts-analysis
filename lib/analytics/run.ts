@@ -10,6 +10,11 @@ import {
   getRaw,
   normalizeCardName,
 } from "./helpers";
+import {
+  extractSts2RemovedCardsWithFloors,
+  getSts2CardDecisionContextMap,
+  getSts2ShopVisits,
+} from "./sts2Projection";
 
 // ── Per-run types (private to analytics module) ───────────────────────────────
 
@@ -218,6 +223,49 @@ export function getRelicsForRun(run: Run, playerIndex?: number): string[] {
   return getRelicsRaw(run, playerIndex);
 }
 
+export type ItemWithFloor = { id: string; floor?: number };
+
+export function getRelicsWithFloors(
+  run: Run,
+  playerIndex?: number,
+): ItemWithFloor[] {
+  const raw = getRaw(run);
+  if (run.game === "STS2" && Array.isArray(raw?.players) && raw.players.length > 0) {
+    const idx = Math.min(
+      Math.max(0, playerIndex ?? 0),
+      raw.players.length - 1,
+    );
+    const relics: unknown = raw.players[idx]?.relics;
+    if (!Array.isArray(relics)) return [];
+    return relics
+      .filter((r: any) => r && typeof r.id === "string")
+      .map((r: any) => ({
+        id: r.id,
+        floor: typeof r.floor_added_to_deck === "number" ? r.floor_added_to_deck : undefined,
+      }));
+  }
+  const ids = getRelicsRaw(run, playerIndex);
+  return ids.map((id) => ({ id, floor: undefined }));
+}
+
+export function getRemovedCardsWithFloors(
+  run: Run,
+  playerIndex?: number,
+): ItemWithFloor[] {
+  if (run.game === "STS2") {
+    return extractSts2RemovedCardsWithFloors(run, playerIndex);
+  }
+  const ids = getItemsPurgedRaw(run);
+  return ids.map((id) => ({ id, floor: undefined }));
+}
+
+export type CardDecisionContext = {
+  relics: string[];
+  deck: string[];
+  gold: number;
+  potions: string[];
+};
+
 export function getCardDecisionRows(run: Run): CardDecisionRow[] {
   const choices = getCardChoicesRaw(run);
   if (choices.length === 0) return [];
@@ -241,6 +289,18 @@ export function getCardDecisionRows(run: Run): CardDecisionRow[] {
   }
 
   return rows;
+}
+
+export function getCardDecisionContext(
+  run: Run,
+  floor: number,
+  playerIndex?: number,
+): CardDecisionContext | null {
+  if (run.game === "STS2") {
+    const map = getSts2CardDecisionContextMap(run, playerIndex);
+    return map.get(floor) ?? null;
+  }
+  return null;
 }
 
 export function getPathOverview(run: Run): PathStep[] {
@@ -278,7 +338,27 @@ export function getPathOverview(run: Run): PathStep[] {
 
   // Rest site actions (campfire choices always use absolute floor numbers in STS).
   const restActions = new Map<number, string>();
-  if (Array.isArray(campfireChoices)) {
+  if (run.game === "STS2" && Array.isArray((raw as any)?.map_point_history)) {
+    let floor = 1;
+    for (const act of (raw as any).map_point_history) {
+      if (!Array.isArray(act)) continue;
+      for (const point of act) {
+        if (!point || typeof point !== "object") continue;
+        if ((point as any).map_point_type === "rest_site") {
+          const statsArr = (point as any).player_stats;
+          const choices = Array.isArray(statsArr) && statsArr[0]
+            ? (statsArr[0] as any).rest_site_choices
+            : undefined;
+          if (Array.isArray(choices) && choices.includes("SMITH")) {
+            restActions.set(floor, "Smith");
+          } else {
+            restActions.set(floor, "Sleep");
+          }
+        }
+        floor += 1;
+      }
+    }
+  } else if (Array.isArray(campfireChoices)) {
     for (const choice of campfireChoices) {
       if (typeof choice !== "object" || choice === null) continue;
       const floor = (choice as any).floor;
@@ -376,7 +456,13 @@ export function getPathOverview(run: Run): PathStep[] {
  * Returns shop visits for a run, indexed by floor.
  * Only visits are returned; use `.visits` to get per-floor purchase lists.
  */
-export function getShopVisitsForRun(run: Run): ShopVisit[] {
+export function getShopVisitsForRun(
+  run: Run,
+  playerIndex?: number,
+): ShopVisit[] {
+  if (run.game === "STS2") {
+    return getSts2ShopVisits(run, playerIndex);
+  }
   const raw = getRaw(run);
   const items: unknown = raw?.items_purchased;
   const floors: unknown = raw?.item_purchase_floors;
@@ -457,8 +543,8 @@ export function getShopVisitsForRun(run: Run): ShopVisit[] {
   return visits;
 }
 
-export function getGoldPerFloor(run: Run): GoldPoint[] {
-  const goldPerFloor = getGoldPerFloorRaw(run);
+export function getGoldPerFloor(run: Run, playerIndex?: number): GoldPoint[] {
+  const goldPerFloor = getGoldPerFloorRaw(run, playerIndex);
   return goldPerFloor.map((gold, i) => ({ floor: i + 1, gold }));
 }
 

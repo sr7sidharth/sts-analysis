@@ -1,5 +1,10 @@
 import type { Run } from "@/types/run";
-import { extractSts2CardChoices, extractSts2RemovedCards } from "./sts2Projection";
+import {
+  extractSts2CardChoices,
+  extractSts2RemovedCards,
+  getSts2GoldPerFloor,
+  getSts2PathPerFloor,
+} from "./sts2Projection";
 
 export function normalizeCardName(name: string): string {
   const plusIndex = name.indexOf("+");
@@ -77,6 +82,9 @@ export function getRelicsRaw(run: Run, playerIndex?: number): string[] {
 }
 
 export function getPathPerFloorRaw(run: Run): string[] {
+  if (run.game === "STS2") {
+    return getSts2PathPerFloor(run);
+  }
   const raw = getRaw(run);
   const pathPerFloor: unknown = raw?.path_per_floor;
   const pathTaken: unknown = raw?.path_taken;
@@ -114,7 +122,10 @@ export function getCardChoicesRaw(run: Run): any[] {
   return Array.isArray(cardChoices) ? cardChoices : [];
 }
 
-export function getGoldPerFloorRaw(run: Run): number[] {
+export function getGoldPerFloorRaw(run: Run, playerIndex?: number): number[] {
+  if (run.game === "STS2") {
+    return getSts2GoldPerFloor(run, playerIndex);
+  }
   const raw = getRaw(run);
   const goldPerFloor: unknown = raw?.gold_per_floor;
   if (!Array.isArray(goldPerFloor)) return [];

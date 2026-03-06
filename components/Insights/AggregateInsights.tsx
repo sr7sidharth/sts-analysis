@@ -299,7 +299,7 @@ export function AggregateInsights({
         </div>
         <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
           <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Most Common Death</div>
-          <div className="mt-1 text-sm font-medium text-zinc-900">{overview.mostCommonDeath ?? "—"}</div>
+          <div className="mt-1 text-sm font-medium text-zinc-900">{formatIdLabel(overview.mostCommonDeath ?? "") || "—"}</div>
         </div>
         <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3 md:col-span-4">
           <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Deck Size (Final Deck)</div>
@@ -358,7 +358,7 @@ export function AggregateInsights({
         </div>
 
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-zinc-900">Card Occurrence (Final Deck)</h2>
+          <h2 className="mb-2 text-sm font-semibold text-zinc-900">Card Occurrence</h2>
           <ScrollableTable
             columns={cardOccCols}
             emptyMessage="No final deck data found for the selected runs."
@@ -375,7 +375,9 @@ export function AggregateInsights({
         </div>
 
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-zinc-900">Encounter Averages</h2>
+          <h2 className="mb-2 text-sm font-semibold text-zinc-900" title="Number of encounters in winning vs losing runs">
+            Encounter Averages
+          </h2>
           <ScrollableTable
             columns={[
               { label: "Type" },

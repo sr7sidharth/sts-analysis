@@ -14,7 +14,10 @@ export {
 export {
   getFinalDeck,
   getRelicsForRun,
+  getRelicsWithFloors,
+  getRemovedCardsWithFloors,
   getCardDecisionRows,
+  getCardDecisionContext,
   getPathOverview,
   getShopVisitsForRun,
   getGoldPerFloor,
