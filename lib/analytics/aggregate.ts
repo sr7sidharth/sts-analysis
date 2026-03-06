@@ -25,10 +25,6 @@ import {
 
 export function filterRuns(runs: Run[], filters: RunFilters): Run[] {
   return runs.filter((run) => {
-    // Until STS2 is fully supported, restrict analytics to STS1 runs by default.
-    if (run.game && run.game !== "STS1") {
-      return false;
-    }
     // Daily runs are excluded from aggregate stats unless explicitly opted in.
     if (!filters.includeDailies && run.isDaily) {
       return false;

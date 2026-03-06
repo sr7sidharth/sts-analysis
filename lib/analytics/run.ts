@@ -101,6 +101,40 @@ const BASE_DECK: Record<string, string[]> = {
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 export function getFinalDeck(run: Run): FinalDeckCard[] {
+  // STS2: derive directly from the player's deck objects.
+  if (run.game === "STS2") {
+    const raw = getRaw(run);
+    const primary = Array.isArray(raw?.players) && raw.players.length > 0
+      ? raw.players[0]
+      : undefined;
+    const deckRaw: unknown = primary?.deck;
+    if (!Array.isArray(deckRaw)) return [];
+
+    const deck: FinalDeckCard[] = [];
+    for (const entry of deckRaw) {
+      if (!entry || typeof entry !== "object") continue;
+      const id: unknown = (entry as any).id;
+      if (typeof id !== "string") continue;
+      const upgradeLevel: unknown = (entry as any).current_upgrade_level;
+      const floorAdded: unknown = (entry as any).floor_added_to_deck;
+      const upgraded = typeof upgradeLevel === "number" && upgradeLevel > 0;
+
+      // For now, treat floor 1 cards as starting, others as added.
+      const isStarting = floorAdded === 1;
+      const isAdded = !isStarting;
+
+      const name = upgraded ? `${id}+${upgradeLevel}` : id;
+      deck.push({ name, upgraded, isStarting, isAdded });
+    }
+
+    deck.sort((a, b) => {
+      if (a.isStarting !== b.isStarting) return a.isStarting ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return deck;
+  }
+
   const masterDeck = getMasterDeckRaw(run);
   if (masterDeck.length === 0) return [];
 

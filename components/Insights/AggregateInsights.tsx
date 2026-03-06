@@ -1,18 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Run } from "@/types/run";
-import {
-  computeCardStats,
-  computeCardOccurrenceStats,
-  computeDeathStats,
-  computeOverviewStats,
-  computeRelicStats,
-  computeRemovedCardStats,
-  computeShopStats,
-  computeDeckSizeStats,
-  computeEncounterAverages,
-} from "@/lib/analytics";
+import type { GameId, Run } from "@/types/run";
+import { getAnalyticsStrategyForGame } from "@/lib/analytics/strategies";
 import type { SortState } from "@/lib/sortUtils";
 import { toggleSort, sortIndicator } from "@/lib/sortUtils";
 import { useRunFilters } from "@/lib/useRunFilters";
@@ -41,41 +31,48 @@ export function AggregateInsights({
     hasDailyRuns,
   } = useRunFilters(runs);
 
+  const game: GameId =
+    (filteredRuns[0]?.game ?? runs[0]?.game ?? "STS1") as GameId;
+  const strategy = useMemo(
+    () => getAnalyticsStrategyForGame(game),
+    [game],
+  );
+
   const overview = useMemo(
-    () => computeOverviewStats(filteredRuns),
-    [filteredRuns],
+    () => strategy.computeOverviewStats(filteredRuns),
+    [strategy, filteredRuns],
   );
   const deckSizeStats = useMemo(
-    () => computeDeckSizeStats(filteredRuns),
-    [filteredRuns],
+    () => strategy.computeDeckSizeStats(filteredRuns),
+    [strategy, filteredRuns],
   );
   const deathStats = useMemo(
-    () => computeDeathStats(filteredRuns),
-    [filteredRuns],
+    () => strategy.computeDeathStats(filteredRuns),
+    [strategy, filteredRuns],
   );
   const cardStats = useMemo(
-    () => computeCardStats(filteredRuns),
-    [filteredRuns],
+    () => strategy.computeCardStats(filteredRuns),
+    [strategy, filteredRuns],
   );
   const cardOccurrenceStats = useMemo(
-    () => computeCardOccurrenceStats(filteredRuns),
-    [filteredRuns],
+    () => strategy.computeCardOccurrenceStats(filteredRuns),
+    [strategy, filteredRuns],
   );
   const relicStats = useMemo(
-    () => computeRelicStats(filteredRuns),
-    [filteredRuns],
+    () => strategy.computeRelicStats(filteredRuns),
+    [strategy, filteredRuns],
   );
   const shopStats = useMemo(
-    () => computeShopStats(filteredRuns),
-    [filteredRuns],
+    () => strategy.computeShopStats(filteredRuns),
+    [strategy, filteredRuns],
   );
   const removedCardStats = useMemo(
-    () => computeRemovedCardStats(filteredRuns),
-    [filteredRuns],
+    () => strategy.computeRemovedCardStats(filteredRuns),
+    [strategy, filteredRuns],
   );
   const encounterAverages = useMemo(
-    () => computeEncounterAverages(filteredRuns),
-    [filteredRuns],
+    () => strategy.computeEncounterAverages(filteredRuns),
+    [strategy, filteredRuns],
   );
 
   // ── Card pick rate sort ──────────────────────────────────────────────────
@@ -480,3 +477,4 @@ export function AggregateInsights({
     </div>
   );
 }
+

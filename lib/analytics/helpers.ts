@@ -12,16 +12,59 @@ export function getRaw(run: Run): any {
 
 export function getMasterDeckRaw(run: Run): string[] {
   const raw = getRaw(run);
+  // STS1: master_deck is an array of strings.
   const masterDeck: unknown = raw?.master_deck;
-  if (!Array.isArray(masterDeck)) return [];
-  return masterDeck.filter((entry: unknown): entry is string => typeof entry === "string");
+  if (Array.isArray(masterDeck)) {
+    return masterDeck.filter(
+      (entry: unknown): entry is string => typeof entry === "string",
+    );
+  }
+
+  // STS2: derive from players[0].deck, which is an array of objects.
+  if (run.game === "STS2" && Array.isArray(raw?.players) && raw.players.length > 0) {
+    const primary = raw.players[0];
+    const deck: unknown = primary.deck;
+    if (!Array.isArray(deck)) return [];
+
+    const result: string[] = [];
+    for (const card of deck) {
+      if (!card || typeof card !== "object") continue;
+      const id: unknown = (card as any).id;
+      if (typeof id !== "string") continue;
+      const upgradeLevel: unknown = (card as any).current_upgrade_level;
+      if (typeof upgradeLevel === "number" && upgradeLevel > 0) {
+        result.push(`${id}+${upgradeLevel}`);
+      } else {
+        result.push(id);
+      }
+    }
+    return result;
+  }
+
+  return [];
 }
 
 export function getRelicsRaw(run: Run): string[] {
   const raw = getRaw(run);
+  // STS1: relics is an array of strings.
   const relics: unknown = raw?.relics;
-  if (!Array.isArray(relics)) return [];
-  return relics.filter((entry: unknown): entry is string => typeof entry === "string");
+  if (Array.isArray(relics)) {
+    return relics.filter(
+      (entry: unknown): entry is string => typeof entry === "string",
+    );
+  }
+
+  // STS2: players[0].relics is an array of objects with id.
+  if (run.game === "STS2" && Array.isArray(raw?.players) && raw.players.length > 0) {
+    const primary = raw.players[0];
+    const rawRelics: unknown = primary.relics;
+    if (!Array.isArray(rawRelics)) return [];
+    return rawRelics
+      .map((r: any) => r?.id)
+      .filter((id: unknown): id is string => typeof id === "string");
+  }
+
+  return [];
 }
 
 export function getPathPerFloorRaw(run: Run): string[] {
