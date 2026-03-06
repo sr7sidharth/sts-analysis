@@ -8,6 +8,7 @@ import { toggleSort, sortIndicator } from "@/lib/sortUtils";
 import { useRunFilters } from "@/lib/useRunFilters";
 import { ScrollableTable } from "@/components/ScrollableTable";
 import type { ColumnDef } from "@/components/ScrollableTable";
+import { formatIdLabel } from "@/lib/labels";
 
 type AggregateInsightsProps = {
   runs: Run[];
@@ -327,7 +328,9 @@ export function AggregateInsights({
             columns={cardPickCols}
             emptyMessage="No card choices found for the selected runs."
             rows={sortedCards.map(({ name, stat, pickRate, winRate, skipRate }) => [
-              <span className="font-medium text-zinc-800">{name}</span>,
+              <span className="font-medium text-zinc-800">
+                {formatIdLabel(name)}
+              </span>,
               <span className="text-zinc-700">{stat.offered}</span>,
               <span className="text-zinc-700">{stat.picked}</span>,
               <span className="text-zinc-700">{pickRate.toFixed(1)}%</span>,
@@ -346,7 +349,9 @@ export function AggregateInsights({
             ]}
             emptyMessage="No deaths recorded."
             rows={sortedDeaths.map(([enemy, count]) => [
-              <span className="font-medium text-zinc-800">{enemy}</span>,
+              <span className="font-medium text-zinc-800">
+                {formatIdLabel(enemy)}
+              </span>,
               <span className="text-zinc-700">{count}</span>,
             ])}
           />
@@ -359,7 +364,9 @@ export function AggregateInsights({
             emptyMessage="No final deck data found for the selected runs."
             rows={sortedCardOccurrence.map((entry, index) => [
               <span className="text-zinc-700">{index + 1}</span>,
-              <span className="font-medium text-zinc-800">{entry.id}</span>,
+              <span className="font-medium text-zinc-800">
+                {formatIdLabel(entry.id)}
+              </span>,
               <span className="text-zinc-700">{entry.runsWithCardOverall}</span>,
               <span className="text-emerald-700">{entry.runsWithCardWins}</span>,
               <span className="text-red-700">{entry.runsWithCardLosses}</span>,
@@ -398,7 +405,9 @@ export function AggregateInsights({
             emptyMessage="No relic data found for the selected runs."
             rows={sortedRelics.map(({ name, stat, losses }, index) => [
               <span className="text-zinc-700">{index + 1}</span>,
-              <span className="font-medium text-zinc-800">{name}</span>,
+              <span className="font-medium text-zinc-800">
+                {formatIdLabel(name)}
+              </span>,
               <span className="text-zinc-700">{stat.runsWithRelic}</span>,
               <span className="text-emerald-700">{stat.winCount}</span>,
               <span className="text-red-700">{losses}</span>,
@@ -421,7 +430,9 @@ export function AggregateInsights({
                 ? (stat.winsWithRemoval / stat.runsWithRemoval) * 100
                 : 0;
               return [
-                <span className="font-medium text-zinc-800">{name}</span>,
+                <span className="font-medium text-zinc-800">
+                  {formatIdLabel(name)}
+                </span>,
                 <span className="text-zinc-700">{stat.timesRemoved}</span>,
                 <span className="text-zinc-700">{stat.runsWithRemoval}</span>,
                 <span className="text-zinc-700">{winRate.toFixed(1)}%</span>,
@@ -444,7 +455,9 @@ export function AggregateInsights({
                 ? (stat.winsWithPurchase / stat.runsWithPurchase) * 100
                 : 0;
               return [
-                <span className="font-medium text-zinc-800">{name}</span>,
+                <span className="font-medium text-zinc-800">
+                  {formatIdLabel(name)}
+                </span>,
                 <span className="text-zinc-700">{stat.bought}</span>,
                 <span className="text-zinc-700">{winRate.toFixed(1)}%</span>,
               ];
@@ -466,7 +479,9 @@ export function AggregateInsights({
                 ? (stat.winsWithPurchase / stat.runsWithPurchase) * 100
                 : 0;
               return [
-                <span className="font-medium text-zinc-800">{name}</span>,
+                <span className="font-medium text-zinc-800">
+                  {formatIdLabel(name)}
+                </span>,
                 <span className="text-zinc-700">{stat.bought}</span>,
                 <span className="text-zinc-700">{winRate.toFixed(1)}%</span>,
               ];

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Run } from "@/types/run";
+import { formatIdLabel } from "@/lib/labels";
 
 type RunSidebarProps = {
   runs: Run[];
@@ -132,7 +133,7 @@ export function RunSidebar({
                           {run.victory
                             ? "Win"
                             : run.killedBy
-                              ? `Died to ${run.killedBy}`
+                              ? `Died to ${formatIdLabel(run.killedBy)}`
                               : "Loss"}
                         </span>
                       </div>

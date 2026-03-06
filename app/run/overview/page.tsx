@@ -28,19 +28,19 @@ export default function OverviewPage() {
 
     // Initialise or repair activeGame when runs/games change.
     if (!activeGame) {
-      if (gamesPresent.includes("STS1")) {
-        setActiveGame("STS1");
-      } else if (gamesPresent.includes("STS2")) {
+      if (gamesPresent.includes("STS2")) {
         setActiveGame("STS2");
-      }
+      } else if (gamesPresent.includes("STS1")) {
+        setActiveGame("STS1");
+      } 
       return;
     }
 
     if (!gamesPresent.includes(activeGame)) {
-      if (gamesPresent.includes("STS1")) {
-        setActiveGame("STS1");
-      } else if (gamesPresent.includes("STS2")) {
+      if (gamesPresent.includes("STS2")) {
         setActiveGame("STS2");
+      } else if (gamesPresent.includes("STS1")) {
+        setActiveGame("STS1");
       } else {
         setActiveGame(undefined);
       }

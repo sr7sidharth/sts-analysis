@@ -100,13 +100,13 @@ const BASE_DECK: Record<string, string[]> = {
 
 // ── Exports ───────────────────────────────────────────────────────────────────
 
-export function getFinalDeck(run: Run): FinalDeckCard[] {
+export function getFinalDeck(run: Run, playerIndex?: number): FinalDeckCard[] {
   // STS2: derive directly from the player's deck objects.
   if (run.game === "STS2") {
     const raw = getRaw(run);
-    const primary = Array.isArray(raw?.players) && raw.players.length > 0
-      ? raw.players[0]
-      : undefined;
+    const players = Array.isArray(raw?.players) ? raw.players : [];
+    const idx = Math.min(Math.max(0, playerIndex ?? 0), players.length - 1);
+    const primary = players.length > 0 ? players[idx] : undefined;
     const deckRaw: unknown = primary?.deck;
     if (!Array.isArray(deckRaw)) return [];
 
@@ -214,8 +214,8 @@ export function getFinalDeck(run: Run): FinalDeckCard[] {
   return deck;
 }
 
-export function getRelicsForRun(run: Run): string[] {
-  return getRelicsRaw(run);
+export function getRelicsForRun(run: Run, playerIndex?: number): string[] {
+  return getRelicsRaw(run, playerIndex);
 }
 
 export function getCardDecisionRows(run: Run): CardDecisionRow[] {

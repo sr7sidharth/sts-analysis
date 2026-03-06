@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Run } from "@/types/run";
 import {
   getCardDecisionRows,
@@ -11,6 +12,7 @@ import {
   getGoldPerFloor,
 } from "@/lib/analytics";
 import { ScrollableTable } from "@/components/ScrollableTable";
+import { formatIdLabel } from "@/lib/labels";
 
 const SYMBOL_LABEL: Record<string, string> = {
   M: "Monster",
@@ -27,8 +29,15 @@ type SingleRunInsightsProps = {
 };
 
 export function SingleRunInsights({ run }: SingleRunInsightsProps) {
-  const deck = getFinalDeck(run);
-  const relics = getRelicsForRun(run);
+  const raw = run.raw as { players?: { character?: string }[] } | undefined;
+  const players = Array.isArray(raw?.players) ? raw.players : [];
+  const hasMultiplePlayers = run.game === "STS2" && players.length > 1;
+
+  const [selectedPlayerIndex, setSelectedPlayerIndex] = useState(0);
+  const effectivePlayerIndex = hasMultiplePlayers ? selectedPlayerIndex : 0;
+
+  const deck = getFinalDeck(run, effectivePlayerIndex);
+  const relics = getRelicsForRun(run, effectivePlayerIndex);
   const decisions = getCardDecisionRows(run);
   const path = getPathOverview(run);
   const removedCards = getRemovedCardsForRun(run);
@@ -39,6 +48,31 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
     typeof run.timestamp === "number"
       ? new Date(run.timestamp * 1000)
       : new Date();
+
+  // Simple potion usage summary for STS2: count all potion_used entries in map_point_history.
+  let potionsUsed: number | null = null;
+  if (run.game === "STS2") {
+    const raw: any = run.raw;
+    if (Array.isArray(raw?.map_point_history)) {
+      let count = 0;
+      for (const act of raw.map_point_history) {
+        if (!Array.isArray(act)) continue;
+        for (const point of act) {
+          if (!point || typeof point !== "object") continue;
+          const statsArr: unknown = (point as any).player_stats;
+          if (!Array.isArray(statsArr)) continue;
+          for (const stats of statsArr) {
+            if (!stats || typeof stats !== "object") continue;
+            const used: unknown = (stats as any).potion_used;
+            if (Array.isArray(used)) {
+              count += used.length;
+            }
+          }
+        }
+      }
+      potionsUsed = count;
+    }
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -69,8 +103,30 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
             <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
               Run Summary
             </div>
+            {hasMultiplePlayers && (
+              <div className="mb-2">
+                <label className="mr-2 text-[11px] font-semibold text-zinc-600">
+                  Character:
+                </label>
+                <select
+                  className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900"
+                  value={selectedPlayerIndex}
+                  onChange={(e) =>
+                    setSelectedPlayerIndex(Number(e.target.value))
+                  }
+                >
+                  {players.map((p, i) => (
+                    <option key={i} value={i}>
+                      {formatIdLabel(p?.character ?? `Player ${i + 1}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="mt-1 text-lg font-semibold text-zinc-900">
-              {run.character}{" "}
+              {hasMultiplePlayers
+                ? formatIdLabel(players[effectivePlayerIndex]?.character ?? run.character)
+                : run.character}{" "}
               {run.isDaily ? (
                 <span className="text-base font-normal text-zinc-500">Daily</span>
               ) : (
@@ -89,9 +145,14 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
               {run.victory
                 ? "Victory"
                 : run.killedBy
-                  ? `Killed by ${run.killedBy}`
+                  ? `Killed by ${formatIdLabel(run.killedBy)}`
                   : "Defeat"}
             </div>
+            {potionsUsed != null && (
+              <div className="mt-1 text-zinc-600">
+                Potions used: {potionsUsed}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -126,7 +187,7 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
                           : "text-zinc-800"
                     }`}
                   >
-                    {card.name}
+                    {formatIdLabel(card.name.replace(/\+.*/, ""))}
                     {card.upgraded && (
                       <span className="ml-1 text-[10px] font-semibold uppercase">
                         +
@@ -161,7 +222,7 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
                     key={relic}
                     className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-zinc-800"
                   >
-                    {relic}
+                    {formatIdLabel(relic)}
                   </li>
                 ))}
               </ul>
@@ -183,7 +244,7 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
                     key={`${name}-${index}`}
                     className="rounded border border-red-100 bg-red-50 px-2 py-1 text-red-700"
                   >
-                    <span className="font-medium">{name}</span>
+                    <span className="font-medium">{formatIdLabel(name)}</span>
                   </li>
                 ))}
               </ul>
@@ -207,9 +268,13 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
             emptyMessage="No card choice data available."
             rows={decisions.map((row, index) => [
               <span key={index} className="text-zinc-700">{row.floor ?? "—"}</span>,
-              <span className="text-zinc-800">{row.picked ?? "—"}</span>,
+              <span className="text-zinc-800">
+                {row.picked ? formatIdLabel(row.picked) : "—"}
+              </span>,
               <span className="text-zinc-700">
-                {row.skipped.length > 0 ? row.skipped.join(", ") : "—"}
+                {row.skipped.length > 0
+                  ? row.skipped.map((name) => formatIdLabel(name)).join(", ")
+                  : "—"}
               </span>,
             ])}
           />
@@ -239,16 +304,22 @@ export function SingleRunInsights({ run }: SingleRunInsightsProps) {
                 const label = SYMBOL_LABEL[step.symbol] ?? step.symbol;
                 return [
                   <span className="text-zinc-700">{step.floor}</span>,
-                  <span className="text-zinc-800">
-                    <span>{label}</span>
+                    <span className="text-zinc-800">
+                      <span>{label}</span>
                     {step.detail && (
                       <span className="ml-2 text-[11px] text-zinc-600">
-                        {step.symbol === "R" ? `(${step.detail})` : step.detail}
+                          {step.symbol === "R"
+                            ? `(${formatIdLabel(step.detail)})`
+                            : formatIdLabel(step.detail)}
                       </span>
                     )}
                     {shopItems.length > 0 && (
                       <span className="ml-2 text-[11px] text-zinc-600">
-                        ({shopItems.join(", ")})
+                          (
+                          {shopItems
+                            .map((item) => formatIdLabel(item))
+                            .join(", ")}
+                          )
                       </span>
                     )}
                   </span>,

@@ -48,10 +48,12 @@ export default function RunPage() {
     );
   }
 
+  const runsForSameGame = runs.filter((r) => r.game === run.game);
+
   return (
     <main className="flex h-screen bg-zinc-50">
       <RunSidebar
-        runs={runs}
+        runs={runsForSameGame}
         activeRunId={run.id}
         activeCharacter={run.character}
         onDeleteRun={(id) => {

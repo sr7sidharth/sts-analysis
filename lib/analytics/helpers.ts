@@ -1,4 +1,5 @@
 import type { Run } from "@/types/run";
+import { extractSts2CardChoices, extractSts2RemovedCards } from "./sts2Projection";
 
 export function normalizeCardName(name: string): string {
   const plusIndex = name.indexOf("+");
@@ -10,7 +11,7 @@ export function getRaw(run: Run): any {
   return (run.raw as any) ?? {};
 }
 
-export function getMasterDeckRaw(run: Run): string[] {
+export function getMasterDeckRaw(run: Run, playerIndex?: number): string[] {
   const raw = getRaw(run);
   // STS1: master_deck is an array of strings.
   const masterDeck: unknown = raw?.master_deck;
@@ -20,9 +21,13 @@ export function getMasterDeckRaw(run: Run): string[] {
     );
   }
 
-  // STS2: derive from players[0].deck, which is an array of objects.
+  // STS2: derive from players[playerIndex].deck.
   if (run.game === "STS2" && Array.isArray(raw?.players) && raw.players.length > 0) {
-    const primary = raw.players[0];
+    const idx = Math.min(
+      Math.max(0, playerIndex ?? 0),
+      raw.players.length - 1,
+    );
+    const primary = raw.players[idx];
     const deck: unknown = primary.deck;
     if (!Array.isArray(deck)) return [];
 
@@ -44,7 +49,7 @@ export function getMasterDeckRaw(run: Run): string[] {
   return [];
 }
 
-export function getRelicsRaw(run: Run): string[] {
+export function getRelicsRaw(run: Run, playerIndex?: number): string[] {
   const raw = getRaw(run);
   // STS1: relics is an array of strings.
   const relics: unknown = raw?.relics;
@@ -54,9 +59,13 @@ export function getRelicsRaw(run: Run): string[] {
     );
   }
 
-  // STS2: players[0].relics is an array of objects with id.
+  // STS2: players[playerIndex].relics is an array of objects with id.
   if (run.game === "STS2" && Array.isArray(raw?.players) && raw.players.length > 0) {
-    const primary = raw.players[0];
+    const idx = Math.min(
+      Math.max(0, playerIndex ?? 0),
+      raw.players.length - 1,
+    );
+    const primary = raw.players[idx];
     const rawRelics: unknown = primary.relics;
     if (!Array.isArray(rawRelics)) return [];
     return rawRelics
@@ -82,6 +91,9 @@ export function getPathPerFloorRaw(run: Run): string[] {
 
 export function getItemsPurgedRaw(run: Run): string[] {
   const raw = getRaw(run);
+  if (run.game === "STS2") {
+    return extractSts2RemovedCards(run);
+  }
   const removed: unknown = raw?.items_purged;
   if (!Array.isArray(removed)) return [];
   return removed.filter((entry: unknown): entry is string => typeof entry === "string");
@@ -95,6 +107,9 @@ export function getCampfireChoicesRaw(run: Run): any[] {
 
 export function getCardChoicesRaw(run: Run): any[] {
   const raw = getRaw(run);
+  if (run.game === "STS2") {
+    return extractSts2CardChoices(run);
+  }
   const cardChoices: unknown = raw?.card_choices;
   return Array.isArray(cardChoices) ? cardChoices : [];
 }
